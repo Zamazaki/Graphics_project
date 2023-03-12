@@ -34,9 +34,11 @@ unsigned int currentKeyFrame = 0;
 unsigned int previousKeyFrame = 0;
 
 SceneNode* rootNode;
+SceneNode* charTextureNode;
 SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* padNode;
+SceneNode* skyboxNode;
 
 double ballRadius = 3.0f;
 
@@ -90,11 +92,28 @@ void mouseCallback(GLFWwindow* window, double x, double y) {
     glfwSetCursorPos(window, windowWidth / 2, windowHeight / 2);
 }
 
-//// A few lines to help you if you've never used c++ structs
-// struct LightSource {
-//     bool a_placeholder_value;
-// };
-// LightSource lightSources[/*Put number of light sources you want here*/];
+// A few lines to help you if you've never used c++ structs
+struct LightSource {
+    SceneNode *lightNode;
+    glm::vec3 lightColor;
+};
+LightSource lightSources[3];
+
+
+//For general 2d textures
+void uploadTexture(GLuint *unbound_int, PNGImage& image){
+    glGenTextures(1, unbound_int);
+    glBindTexture(GL_TEXTURE_2D, *unbound_int);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexImage2D(
+        GL_TEXTURE_2D, 0, GL_RGBA,
+        image.width, image.height, 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, image.pixels.data()); //GL_RGBA8
+    glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     buffer = new sf::SoundBuffer();
@@ -116,20 +135,112 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
     Mesh sphere = generateSphere(1.0, 40, 40);
 
+    std::vector<glm::vec3> skyboxVertices = {
+        // positions          
+        {-1.0f,  1.0f, -1.0f},
+        {-1.0f, -1.0f, -1.0f},
+        {1.0f, -1.0f, -1.0f},
+       { 1.0f, -1.0f, -1.0f},
+       { 1.0f,  1.0f, -1.0f},
+        {-1.0f,  1.0f, -1.0f},
+
+        {-1.0f, -1.0f,  1.0f},
+        {-1.0f, -1.0f, -1.0f},
+        {-1.0f,  1.0f, -1.0f},
+        {-1.0f,  1.0f, -1.0f},
+        {-1.0f,  1.0f,  1.0f},
+        {-1.0f, -1.0f,  1.0f},
+
+       { 1.0f, -1.0f, -1.0f},
+       { 1.0f, -1.0f,  1.0f},
+       { 1.0f,  1.0f,  1.0f},
+       { 1.0f,  1.0f,  1.0f},
+       { 1.0f,  1.0f, -1.0f},
+       { 1.0f, -1.0f, -1.0f},
+
+        {-1.0f, -1.0f,  1.0f},
+        {-1.0f,  1.0f,  1.0f},
+       { 1.0f,  1.0f,  1.0f},
+       { 1.0f,  1.0f,  1.0f},
+       { 1.0f, -1.0f,  1.0f},
+        {-1.0f, -1.0f,  1.0f},
+
+        {-1.0f,  1.0f, -1.0f},
+       { 1.0f,  1.0f, -1.0f},
+       { 1.0f,  1.0f,  1.0f},
+       { 1.0f,  1.0f,  1.0f},
+        {-1.0f,  1.0f,  1.0f},
+        {-1.0f,  1.0f, -1.0f},
+
+        {-1.0f, -1.0f, -1.0f},
+        {-1.0f, -1.0f,  1.0f},
+       { 1.0f, -1.0f, -1.0f},
+       { 1.0f, -1.0f, -1.0f},
+        {-1.0f, -1.0f,  1.0f},
+       { 1.0f, -1.0f,  1.0f}
+    };
+
+    std::vector<glm::vec3> skyboxIndices = {
+        {1,2,3},
+        {4,5,6},
+        {7,8,9},
+        {10,12,12},
+        {13,14,15},
+        {16,17,18},
+        {19,20,21},
+        {22,23,24},
+        {25,26,27},
+        {28,29,30},
+        {31,32,33},
+        {34,35,36},
+    };
+
+    Mesh box_sky = cube(boxDimensions, glm::vec2(90), true, true);
     // Fill buffers
     unsigned int ballVAO = generateBuffer(sphere);
     unsigned int boxVAO  = generateBuffer(box);
     unsigned int padVAO  = generateBuffer(pad);
+    unsigned int skyboxVAO = generateBuffer(box_sky); //generateSkyboxBuffer(skyboxVertices, skyboxIndices);
 
     // Construct scene
-    rootNode = createSceneNode();
-    boxNode  = createSceneNode();
-    padNode  = createSceneNode();
-    ballNode = createSceneNode();
+    rootNode = createSceneNode(GEOMETRY_2D);
+    charTextureNode = createSceneNode(GEOMETRY_2D);
+    boxNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
+    padNode  = createSceneNode(GEOMETRY);
+    ballNode = createSceneNode(GEOMETRY);
+    skyboxNode = createSceneNode(GEOMETRY);
 
-    rootNode->children.push_back(boxNode);
+    lightSources[0].lightNode = createSceneNode(POINT_LIGHT);
+    lightSources[1].lightNode = createSceneNode(POINT_LIGHT);
+    lightSources[2].lightNode = createSceneNode(POINT_LIGHT);
+    
+    lightSources[0].lightNode->lightID = 0;
+    lightSources[1].lightNode->lightID = 1;
+    lightSources[2].lightNode->lightID = 2;
+
+    lightSources[0].lightColor = glm::vec3(1.0, 1.0, 1.0);
+    lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
+    lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
+
+    lightSources[0].lightNode->position = glm::vec3(-10.0, 0.0, 0.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 0.0, 0.0);
+    lightSources[2].lightNode->position = glm::vec3( 10.0, 0.0, 0.0);
+
+    //rootNode->children.push_back(boxNode);
     rootNode->children.push_back(padNode);
     rootNode->children.push_back(ballNode);
+    rootNode->children.push_back(charTextureNode);
+    rootNode->children.push_back(skyboxNode);
+    //rootNode->children.push_back(boxNode);
+
+    //addChild(padNode, lightSources[0].lightNode);
+    //addChild(ballNode, lightSources[1].lightNode);
+    //addChild(boxNode, lightSources[2].lightNode);
+
+    addChild(skyboxNode, lightSources[0].lightNode);
+    addChild(skyboxNode, lightSources[1].lightNode);
+    addChild(skyboxNode, lightSources[2].lightNode);
+
 
     boxNode->vertexArrayObjectID  = boxVAO;
     boxNode->VAOIndexCount        = box.indices.size();
@@ -140,8 +251,58 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     ballNode->vertexArrayObjectID = ballVAO;
     ballNode->VAOIndexCount       = sphere.indices.size();
 
+    // Texture time
+    PNGImage charmap =  loadPNGFile("../res/textures/charmap.png");
+    GLuint charmap_id;
+
+    uploadTexture(&charmap_id, charmap);
+    Mesh charmapMesh = generateTextGeometryBuffer("Fisk", 39/29, 29);
+    unsigned int charmapVAO = generateBuffer(charmapMesh);
+
+    charTextureNode->vertexArrayObjectID = charmapVAO;
+    charTextureNode->VAOIndexCount = charmapMesh.indices.size();
+    charTextureNode->position = glm::vec3( 0.0, 0.0, 0.0);
+    charTextureNode->scale = glm::vec3(0.02); // The texture was appearantly a bit big
+    charTextureNode->textureID = charmap_id;
 
 
+    // Texture time, but now with normals and such
+    PNGImage diffuse_bricks =  loadPNGFile("../res/textures/Brick03_col.png");
+    GLuint diffuse_bricks_id;
+    uploadTexture(&diffuse_bricks_id, diffuse_bricks);
+    boxNode->textureID = diffuse_bricks_id;
+
+    PNGImage normal_bricks =  loadPNGFile("../res/textures/Brick03_nrm.png");
+    GLuint normal_bricks_id;
+    uploadTexture(&normal_bricks_id, normal_bricks);
+    boxNode->normalMapTextureID = normal_bricks_id;
+
+    PNGImage rough_bricks =  loadPNGFile("../res/textures/Brick03_rgh.png");
+    GLuint rough_bricks_id;
+    uploadTexture(&rough_bricks_id, rough_bricks);
+    boxNode->roughnessMapID = rough_bricks_id;
+
+    // I will attempt to construct my skybox here
+    skyboxNode->vertexArrayObjectID = skyboxVAO;
+    skyboxNode->VAOIndexCount       = box_sky.indices.size(); //skyboxIndices.size();
+
+    std::vector<std::string> skyboxFaces {
+        "../res/textures/cubemap/negx.jpg", //right
+        "../res/textures/cubemap/negy.jpg", //left
+        "../res/textures/cubemap/negz.jpg", //top
+        "../res/textures/cubemap/posx.jpg", //bottom
+        "../res/textures/cubemap/posy.jpg", //front
+        "../res/textures/cubemap/posz.jpg"  //back
+    };
+
+    GLuint skyboxTextureID;
+    loadCubeMap(&skyboxTextureID, skyboxFaces);
+    skyboxNode->textureID = skyboxTextureID;
+    skyboxNode->isSkybox = 1;
+
+    //boxNode->isSkybox = 1;
+    //boxNode->textureID = skyboxTextureID;
+    //boxNode->nodeType = GEOMETRY_2D;
 
 
 
@@ -151,6 +312,10 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     std::cout << "Ready. Click to start!" << std::endl;
 }
+
+// Global boys that let's us seperate MVP
+glm::mat4 projection;
+glm::mat4 view;
 
 void updateFrame(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -308,9 +473,11 @@ void updateFrame(GLFWwindow* window) {
         }
     }
 
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
+    projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
 
     glm::vec3 cameraPosition = glm::vec3(0, 2, -20);
+
+    //glUniform3fv(6, 1, glm::value_ptr(cameraPosition)); // Send camera position to fragement shader
 
     // Some math to make the camera move in a nice way
     float lookRotation = -0.6 / (1 + exp(-5 * (padPositionX-0.5))) + 0.3;
@@ -319,7 +486,7 @@ void updateFrame(GLFWwindow* window) {
                     glm::rotate(lookRotation, glm::vec3(0, 1, 0)) *
                     glm::translate(-cameraPosition);
 
-    glm::mat4 VP = projection * cameraTransform;
+    //glm::mat4 VP = projection * cameraTransform;
 
     // Move and rotate various SceneNodes
     boxNode->position = { 0, -10, -80 };
@@ -334,9 +501,10 @@ void updateFrame(GLFWwindow* window) {
         boxNode->position.z - (boxDimensions.z/2) + (padDimensions.z/2) + (1 - padPositionZ) * (boxDimensions.z - padDimensions.z)
     };
 
-    updateNodeTransformations(rootNode, VP);
+    view = cameraTransform;
+    updateNodeTransformations(rootNode, glm::identity<glm::mat4>());
 
-
+    glUniform3fv(shader->getUniformFromName("ball_pos"), 1, glm::value_ptr(glm::vec3(ballNode->currentTransformationMatrix*glm::vec4(0,0,0,1))));
 
 
 }
@@ -351,12 +519,18 @@ void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar)
             * glm::scale(node->scale)
             * glm::translate(-node->referencePoint);
 
-    node->currentTransformationMatrix = transformationThusFar * transformationMatrix;
+    node->currentTransformationMatrix = transformationThusFar * transformationMatrix; // M
 
     switch(node->nodeType) {
         case GEOMETRY: break;
-        case POINT_LIGHT: break;
-        case SPOT_LIGHT: break;
+        case SPOT_LIGHT: case POINT_LIGHT: 
+            GLint pos_location = shader->getUniformFromName("light_info[" + std::to_string(node->lightID) + "].position");
+            glUniform3fv(pos_location, 1, glm::value_ptr(glm::vec3(node->currentTransformationMatrix * glm::vec4(0,0,0,1))));
+
+            GLint col_location = shader->getUniformFromName("light_info[" + std::to_string(node->lightID) + "].color");
+            glUniform3fv(col_location, 1, glm::value_ptr(lightSources[node->lightID].lightColor));
+            break;
+        
     }
 
     for(SceneNode* child : node->children) {
@@ -365,11 +539,55 @@ void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar)
 }
 
 void renderNode(SceneNode* node) {
-    glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(node->currentTransformationMatrix));
+    glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(node->currentTransformationMatrix)); //M
+    glUniformMatrix4fv(8, 1, GL_FALSE, glm::value_ptr(view)); //V
+    glUniformMatrix4fv(4, 1, GL_FALSE, glm::value_ptr(projection)); //P
+
+    glm::mat3 normal_matrix = glm::mat3(glm::inverse(glm::transpose(node->currentTransformationMatrix)));
+    glUniformMatrix3fv(5, 1, GL_FALSE, glm::value_ptr(normal_matrix));
+
+
+    if (node->textureID != -1) {
+        glUniform1i(6, 1); // do_texture
+        glBindTextureUnit(0, node->textureID);
+    } else  {
+        glUniform1i(6, 0); // don't do_texture
+    }
+
+    if (node->roughnessMapID != -1) {
+        glUniform1i(9, 1); // roughness
+        glBindTextureUnit(2, node->roughnessMapID);
+    } else  {
+        glUniform1i(9, 0); // no roughness
+    }
+
+    if (node->isSkybox != -1 ){
+        glUniform1i(10, 1);
+        glBindTextureUnit(3, node->textureID);
+    }
+    else{
+        glUniform1i(10, 0);
+    }
 
     switch(node->nodeType) {
         case GEOMETRY:
             if(node->vertexArrayObjectID != -1) {
+                glUniform1i(7, 0); // is_3d
+                glBindVertexArray(node->vertexArrayObjectID);
+                glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
+            }
+            break;
+        case GEOMETRY_2D:
+            if(node->vertexArrayObjectID != -1) {
+                glUniform1i(7, 1); // is_2d
+                glBindVertexArray(node->vertexArrayObjectID);
+                glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
+            }
+            break;
+        case GEOMETRY_NORMAL_MAPPED:
+            if(node->vertexArrayObjectID != -1) {
+                glUniform1i(7, 0); // is_3d
+                glBindTextureUnit(1, node->normalMapTextureID);
                 glBindVertexArray(node->vertexArrayObjectID);
                 glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
             }
@@ -388,5 +606,12 @@ void renderFrame(GLFWwindow* window) {
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
     glViewport(0, 0, windowWidth, windowHeight);
 
+    // set light uniforms, only applies to currently loaded shader
+    glm::vec3 lights[3];
+    for (int i = 0; i < 3; i++) {
+        lights[i] = glm::vec3(lightSources[i].lightNode->currentTransformationMatrix * glm::vec4(0,0,0,1)); //extract the position of each light
+    }
+    glUniform3fv(shader->getUniformFromName("lights"), 3, glm::value_ptr(lights[0]));
+   
     renderNode(rootNode);
 }

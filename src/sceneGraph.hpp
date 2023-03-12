@@ -14,11 +14,11 @@
 #include <fstream>
 
 enum SceneNodeType {
-	GEOMETRY, POINT_LIGHT, SPOT_LIGHT
+	GEOMETRY, POINT_LIGHT, SPOT_LIGHT, GEOMETRY_2D, GEOMETRY_NORMAL_MAPPED
 };
 
 struct SceneNode {
-	SceneNode() {
+	SceneNode(SceneNodeType type) {
 		position = glm::vec3(0, 0, 0);
 		rotation = glm::vec3(0, 0, 0);
 		scale = glm::vec3(1, 1, 1);
@@ -26,8 +26,12 @@ struct SceneNode {
         referencePoint = glm::vec3(0, 0, 0);
         vertexArrayObjectID = -1;
         VAOIndexCount = 0;
+		textureID = -1;
+		lightID = -1;
+		roughnessMapID = -1;
+		isSkybox = -1;
 
-        nodeType = GEOMETRY;
+        nodeType = type;
 
 	}
 
@@ -52,9 +56,24 @@ struct SceneNode {
 
 	// Node type is used to determine how to handle the contents of a node
 	SceneNodeType nodeType;
+
+	//Index in light struct if node is a light
+	int lightID;
+
+	//If node is texture then we must save its ID
+	int textureID;
+
+	// If node is normal texture we must have id for that as well
+	int normalMapTextureID;
+
+	// If node has roughness texture we must have id for that as well
+	int roughnessMapID;
+
+	// If node is skybox, 1 for yes, 0 for no
+	int isSkybox;
 };
 
-SceneNode* createSceneNode();
+SceneNode* createSceneNode(SceneNodeType type);
 void addChild(SceneNode* parent, SceneNode* child);
 void printNode(SceneNode* node);
 int totalChildren(SceneNode* parent);

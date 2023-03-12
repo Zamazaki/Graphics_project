@@ -12,6 +12,7 @@ Mesh generateTextGeometryBuffer(std::string text, float characterHeightOverWidth
 
     mesh.vertices.resize(vertexCount);
     mesh.indices.resize(indexCount);
+    mesh.textureCoordinates.resize(vertexCount);
 
     for(unsigned int i = 0; i < text.length(); i++)
     {
@@ -32,6 +33,11 @@ Mesh generateTextGeometryBuffer(std::string text, float characterHeightOverWidth
         mesh.indices.at(6 * i + 3) = 4 * i + 0;
         mesh.indices.at(6 * i + 4) = 4 * i + 2;
         mesh.indices.at(6 * i + 5) = 4 * i + 3;
+
+        mesh.textureCoordinates.at(4 * i + 0) = {(float)(text[i]/128.0), 0}; // lower left
+        mesh.textureCoordinates.at(4 * i + 1) = {(float)((text[i]+1)/128.0), 0}; // lower right
+        mesh.textureCoordinates.at(4 * i + 2) = {(float)((text[i]+1)/128.0), 1}; // upper left
+        mesh.textureCoordinates.at(4 * i + 3) = {(float)(text[i]/128.0), 1}; // upper right
     }
 
     return mesh;
