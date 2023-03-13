@@ -29,7 +29,7 @@ struct SceneNode {
 		textureID = -1;
 		lightID = -1;
 		roughnessMapID = -1;
-		isSkybox = -1;
+		isSkybox = false;
 
         nodeType = type;
 
@@ -70,7 +70,7 @@ struct SceneNode {
 	int roughnessMapID;
 
 	// If node is skybox, 1 for yes, 0 for no
-	int isSkybox;
+	bool isSkybox;
 };
 
 SceneNode* createSceneNode(SceneNodeType type);

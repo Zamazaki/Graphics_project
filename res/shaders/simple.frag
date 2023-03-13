@@ -12,7 +12,7 @@ struct LightInfo {
     vec3 color;
 };
 uniform LightInfo light_info[3];
-uniform vec3 lights[3];//In gamelogic store positions of all lights and put them in a uniform after we are done updating their nodes, this one is now replaced with light_info
+//uniform vec3 lights[3];//In gamelogic store positions of all lights and put them in a uniform after we are done updating their nodes, this one is now replaced with light_info
 uniform vec3 ball_pos;
 uniform layout(location = 6) int do_textures;
 uniform layout(location = 7) int is_2d;
@@ -117,7 +117,7 @@ void main()
             color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
         }
         else{
-            color = texture(cubeMap, pos);//vec4(1.0, 0.0, 0.0, 1.0);
+            color = texture(cubeMap, normalize(pos - camerapos));//vec4(1.0, 0.0, 0.0, 1.0);
         }
     }
     else{ // is_2d

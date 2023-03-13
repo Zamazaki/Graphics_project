@@ -13,6 +13,7 @@ uniform layout(location = 8) mat4 V;
 uniform layout(location = 5) mat3 normal_matrix;
 uniform layout(location = 6) int do_textures;
 uniform layout(location = 7) int is_2d;
+uniform layout(location = 10) int is_skybox;
 
 //TODO: multiply normal_matrix with TBA matrix
 
@@ -28,15 +29,18 @@ void main()
     vec3 vertexTangent_cameraspace = normal_matrix * normalize(indexed_tangents);
     vec3 vertexBitangent_cameraspace = normal_matrix * normalize(indexed_bitangents);
 
-    mat3 TBN_mat = transpose(mat3(
+    TBN = transpose(mat3(
         vertexTangent_cameraspace,
         vertexBitangent_cameraspace,
         vertexNormal_cameraspace
     ));
 
-    TBN = TBN_mat;
+    if (is_skybox != 0)  {
+        pos_out = position;
+    } else {
+        pos_out = (V * M * vec4(position, 1.0f)).xyz;
+    }
 
-    pos_out = (V * M * vec4(position, 1.0f)).xyz;
     normal_out = normalize(normal_matrix * normal_in);
     textureCoordinates_out = textureCoordinates_in;
     if(is_2d == 0){
