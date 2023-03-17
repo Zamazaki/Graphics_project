@@ -20,6 +20,10 @@
 
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
+#define OBJL_IMPLEMENTATION
+#include "utilities/obj_loader.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -39,6 +43,7 @@ SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* padNode;
 SceneNode* skyboxNode;
+SceneNode* catNode;
 
 double ballRadius = 3.0f;
 
@@ -114,8 +119,68 @@ void uploadTexture(GLuint *unbound_int, PNGImage& image){
 }
 
 
+//For tiny object loader, got it from Odd Erik
+Mesh loadObj(std::string filename){
+    tinyobj::attrib_t attributes;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string error;
+    std::string warning;
+    tinyobj::LoadObj(&attributes, &shapes, &materials, &warning, &error, filename.c_str(), nullptr, false);
+
+    Mesh m;
+    if (shapes.size() > 1){
+        std::cerr << "Unsupported obj format: more than one mesh in file" << std::endl;
+        return m;
+    }
+    if (shapes.size() == 0){
+        std::cerr << error << std::endl;
+        return m;
+    }
+    const auto &shape = shapes.front();
+    std::cout << "Loaded object " << shape.name << " from file " << filename << std::endl;
+    const auto &tmesh = shape.mesh;
+    for (const auto i : tmesh.indices){
+        m.indices.push_back(m.indices.size());
+        glm::vec3 pos;
+        pos.x = attributes.vertices.at(3*i.vertex_index);
+        pos.y = attributes.vertices.at(3*i.vertex_index+1);
+        pos.z = attributes.vertices.at(3*i.vertex_index+2);
+        m.vertices.push_back(pos);
+        glm::vec3 normal;
+        normal.x = attributes.normals.at(3*i.normal_index + 0);
+        normal.y = attributes.normals.at(3*i.normal_index + 1);
+        normal.z = attributes.normals.at(3*i.normal_index + 2);
+        m.normals.push_back(normal);
+        glm::vec2 uv;
+        uv.x = attributes.texcoords.at(2*i.texcoord_index + 0);
+        uv.y = attributes.texcoords.at(2*i.texcoord_index + 1);
+        m.textureCoordinates.push_back(uv);
+
+    }
+
+    return m;
+}
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
+    /*FILE *f = fopen("../res/catlucky.obj", "rb");
+
+    if (f) {
+        fseek(f, 0, SEEK_END);
+        long int FileSize = ftell(f);
+        rewind(f);
+
+        char *FileData = (char *)malloc(FileSize+1);
+        fread(FileData, 1, FileSize, f);
+        fclose(f);
+
+        // The obj loader requires data to be null terminated
+        FileData[FileSize] = 0;
+
+        objl_LoadObjMalloc(FileData, &ObjFile);
+    }*/
+    //TODO: Seems like there has been a buffer overflow somewhere related to the obj loading. Find it and fix it
+
     buffer = new sf::SoundBuffer();
     if (!buffer->loadFromFile("../res/Hall of the Mountain King.ogg")) {
         return;
@@ -134,6 +199,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
     Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
     Mesh sphere = generateSphere(1.0, 40, 40);
+    Mesh cat = loadObj("../res/catlucky.obj");
 
     std::vector<glm::vec3> skyboxVertices = {
         // positions          
@@ -201,6 +267,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     unsigned int boxVAO  = generateBuffer(box);
     unsigned int padVAO  = generateBuffer(pad);
     unsigned int skyboxVAO = generateBuffer(box_sky); //generateSkyboxBuffer(skyboxVertices, skyboxIndices);
+    unsigned int catVAO = generateBuffer(cat);
 
     // Construct scene
     rootNode = createSceneNode(GEOMETRY);
@@ -209,6 +276,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     padNode  = createSceneNode(GEOMETRY);
     ballNode = createSceneNode(GEOMETRY);
     skyboxNode = createSceneNode(GEOMETRY);
+    catNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
 
     lightSources[0].lightNode = createSceneNode(POINT_LIGHT);
     lightSources[1].lightNode = createSceneNode(POINT_LIGHT);
@@ -222,22 +290,23 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
-    lightSources[0].lightNode->position = glm::vec3(-10.0, 0.0, 0.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 0.0, 0.0);
-    lightSources[2].lightNode->position = glm::vec3( 10.0, 0.0, 0.0);
+    lightSources[0].lightNode->position = glm::vec3(-10.0, 0.0, 5.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 0.0, 5.0);
+    lightSources[2].lightNode->position = glm::vec3( 10.0, 0.0, 5.0);
 
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
     rootNode->children.push_back(padNode);
     rootNode->children.push_back(ballNode);
     rootNode->children.push_back(charTextureNode);
+    padNode->children.push_back(catNode);
     //rootNode->children.push_back(boxNode);
 
-    //addChild(padNode, lightSources[0].lightNode);
+    addChild(padNode, lightSources[1].lightNode);
     //addChild(ballNode, lightSources[1].lightNode);
     //addChild(boxNode, lightSources[2].lightNode);
 
-    addChild(rootNode, lightSources[0].lightNode);
+    //addChild(rootNode, lightSources[0].lightNode);
     addChild(rootNode, lightSources[1].lightNode);
     addChild(rootNode, lightSources[2].lightNode);
 
@@ -250,6 +319,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     ballNode->vertexArrayObjectID = ballVAO;
     ballNode->VAOIndexCount       = sphere.indices.size();
+
+    catNode->vertexArrayObjectID  = catVAO;
+    catNode->VAOIndexCount        = cat.indices.size();
+    catNode->scale                = glm::vec3(2.5);
+    catNode->position             = glm::vec3(-25.0, 0.0, 0.0);
+    
 
     // Texture time
     PNGImage charmap =  loadPNGFile("../res/textures/charmap.png");
@@ -281,6 +356,22 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     GLuint rough_bricks_id;
     uploadTexture(&rough_bricks_id, rough_bricks);
     boxNode->roughnessMapID = rough_bricks_id;
+
+    // Cat texture time
+    PNGImage diffuse_cat =  loadPNGFile("../res/textures/cat_lucky/textures/maneki_white_baseColor_gold.png");
+    GLuint diffuse_cat_id;
+    uploadTexture(&diffuse_cat_id, diffuse_cat);
+    catNode->textureID = diffuse_cat_id;
+
+    PNGImage normal_cat =  loadPNGFile("../res/textures/cat_lucky/textures/maneki_white_normal.png");
+    GLuint normal_cat_id;
+    uploadTexture(&normal_cat_id, normal_cat);
+    catNode->normalMapTextureID = normal_cat_id;
+
+    /*PNGImage rough_cat =  loadPNGFile("../res/textures/Brick03_rgh.png");
+    GLuint rough_cat_id;
+    uploadTexture(&rough_cat_id, rough_cat);
+    catNode->roughnessMapID = rough_cat_id;*/
 
     // I will attempt to construct my skybox here
     skyboxNode->vertexArrayObjectID = skyboxVAO;
@@ -515,6 +606,9 @@ void updateFrame(GLFWwindow* window) {
     updateNodeTransformations(rootNode, glm::identity<glm::mat4>());
     view = cameraTransform;
     glUniform3fv(shader->getUniformFromName("ball_pos"), 1, glm::value_ptr(glm::vec3(ballNode->currentTransformationMatrix*glm::vec4(0,0,0,1))));
+
+    //RUN THIS TO DEALOCATE THE CAT AFTER PROGRAM FINISHES
+    //objl_FreeObj(&ObjFile);
 
 }
 

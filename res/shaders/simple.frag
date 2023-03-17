@@ -114,7 +114,12 @@ void main()
                 }
                 
             }
-            color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+            //float refraction_ratio = 1.00/1.33;
+            vec3 I = normalize(pos - camerapos);
+            vec3 R = reflect(I, normalized_normal);
+            //vec3 R = refract(I, normalized_normal, refraction_ratio);
+            //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+            color = vec4((texture(cubeMap, R).rgb + specular_out + ambient_color + dither(textureCoordinates)), 1.0); 
         }
         else{
             color = texture(cubeMap, normalize(pos - camerapos));//vec4(1.0, 0.0, 0.0, 1.0);

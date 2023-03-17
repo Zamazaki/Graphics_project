@@ -2,10 +2,10 @@
 #include <program.hpp>
 #include "glutils.h"
 #include <vector>
-
+#define OBJL_IMPLEMENTATION
+#include "obj_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
-
-#include "stb/stb_image.h"
+#include <stb_image.h>
 
 
 template <class T>
@@ -98,6 +98,63 @@ unsigned int generateBuffer(Mesh &mesh) {
 
     return vaoID;
 }
+
+unsigned int generateObjBuffer(objl_obj_file obj) {
+    unsigned int vaoID;
+    glGenVertexArrays(1, &vaoID);
+    glBindVertexArray(vaoID);
+
+    std::vector<glm::vec3> vertices = {};
+    std::vector<glm::vec3> vertex_normals = {};
+    std::vector<glm::vec2> vertex_textureCoordiantes = {};
+    std::vector<unsigned int> indices = {};
+
+    for (int i = 0; i < obj.v_count; ++i) {
+        vertices[i] = {obj.v[i].x, obj.v[i].y, obj.v[i].z};
+    }
+    generateAttribute(0, 3, vertices, false);
+
+    if (obj.vn_count > 0) {
+        for (int i = 0; i < obj.vn_count; ++i) {
+            vertex_normals[i] = {obj.vn[i].x, obj.vn[i].y, obj.vn[i].z};
+        }
+        generateAttribute(1, 3, vertex_normals, true);
+    }
+
+    if (obj.vt_count > 0) {
+        for (int i = 0; i < obj.vt_count; ++i) {
+            vertex_textureCoordiantes[i] = {obj.vt[i].x, obj.vt[i].y};
+        }
+        generateAttribute(2, 2, vertex_textureCoordiantes, false);
+    }
+
+    if (obj.vn_count > 0 && obj.vt_count > 0){
+        std::vector<glm::vec3> indexed_tangents;
+        std::vector<glm::vec3> indexed_bitangents;
+
+        computeTangentBasis(vertices, vertex_textureCoordiantes, vertex_normals, indexed_tangents, indexed_bitangents);
+
+        generateAttribute(3, 3, indexed_tangents, true);
+
+        generateAttribute(4, 3, indexed_bitangents, true);
+        
+    }
+    
+    for (int i = 0; i < obj.f_count; ++i) {
+        indices[i*3] = obj.f[i].f0.vertex;
+        indices[(i*3)+1] = obj.f[i].f1.vertex;
+        indices[(i*3)+2] =  obj.f[i].f2.vertex;
+    }
+
+    unsigned int indexBufferID;
+    glGenBuffers(1, &indexBufferID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.f_count* 3 * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    return vaoID;
+}
+
+
 
 unsigned int generateSkyboxBuffer(std::vector<glm::vec3> &vertices, std::vector<glm::vec3> &indices) {
     unsigned int vaoID;
