@@ -20,8 +20,6 @@
 
 #include "utilities/imageLoader.hpp"
 #include "utilities/glfont.h"
-#define OBJL_IMPLEMENTATION
-#include "utilities/obj_loader.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
@@ -163,24 +161,7 @@ Mesh loadObj(std::string filename){
 }
 
 void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
-    /*FILE *f = fopen("../res/catlucky.obj", "rb");
-
-    if (f) {
-        fseek(f, 0, SEEK_END);
-        long int FileSize = ftell(f);
-        rewind(f);
-
-        char *FileData = (char *)malloc(FileSize+1);
-        fread(FileData, 1, FileSize, f);
-        fclose(f);
-
-        // The obj loader requires data to be null terminated
-        FileData[FileSize] = 0;
-
-        objl_LoadObjMalloc(FileData, &ObjFile);
-    }*/
-    //TODO: Seems like there has been a buffer overflow somewhere related to the obj loading. Find it and fix it
-
+   
     buffer = new sf::SoundBuffer();
     if (!buffer->loadFromFile("../res/Hall of the Mountain King.ogg")) {
         return;
@@ -200,73 +181,13 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
     Mesh sphere = generateSphere(1.0, 40, 40);
     Mesh cat = loadObj("../res/catlucky.obj");
-
-    std::vector<glm::vec3> skyboxVertices = {
-        // positions          
-        {-1.0f,  1.0f, -1.0f},
-        {-1.0f, -1.0f, -1.0f},
-        {1.0f, -1.0f, -1.0f},
-       { 1.0f, -1.0f, -1.0f},
-       { 1.0f,  1.0f, -1.0f},
-        {-1.0f,  1.0f, -1.0f},
-
-        {-1.0f, -1.0f,  1.0f},
-        {-1.0f, -1.0f, -1.0f},
-        {-1.0f,  1.0f, -1.0f},
-        {-1.0f,  1.0f, -1.0f},
-        {-1.0f,  1.0f,  1.0f},
-        {-1.0f, -1.0f,  1.0f},
-
-       { 1.0f, -1.0f, -1.0f},
-       { 1.0f, -1.0f,  1.0f},
-       { 1.0f,  1.0f,  1.0f},
-       { 1.0f,  1.0f,  1.0f},
-       { 1.0f,  1.0f, -1.0f},
-       { 1.0f, -1.0f, -1.0f},
-
-        {-1.0f, -1.0f,  1.0f},
-        {-1.0f,  1.0f,  1.0f},
-       { 1.0f,  1.0f,  1.0f},
-       { 1.0f,  1.0f,  1.0f},
-       { 1.0f, -1.0f,  1.0f},
-        {-1.0f, -1.0f,  1.0f},
-
-        {-1.0f,  1.0f, -1.0f},
-       { 1.0f,  1.0f, -1.0f},
-       { 1.0f,  1.0f,  1.0f},
-       { 1.0f,  1.0f,  1.0f},
-        {-1.0f,  1.0f,  1.0f},
-        {-1.0f,  1.0f, -1.0f},
-
-        {-1.0f, -1.0f, -1.0f},
-        {-1.0f, -1.0f,  1.0f},
-       { 1.0f, -1.0f, -1.0f},
-       { 1.0f, -1.0f, -1.0f},
-        {-1.0f, -1.0f,  1.0f},
-       { 1.0f, -1.0f,  1.0f}
-    };
-
-    std::vector<glm::vec3> skyboxIndices = {
-        {1,2,3},
-        {4,5,6},
-        {7,8,9},
-        {10,12,12},
-        {13,14,15},
-        {16,17,18},
-        {19,20,21},
-        {22,23,24},
-        {25,26,27},
-        {28,29,30},
-        {31,32,33},
-        {34,35,36},
-    };
-
     Mesh box_sky = cube(boxDimensions, glm::vec2(100), true, true);
+
     // Fill buffers
     unsigned int ballVAO = generateBuffer(sphere);
     unsigned int boxVAO  = generateBuffer(box);
     unsigned int padVAO  = generateBuffer(pad);
-    unsigned int skyboxVAO = generateBuffer(box_sky); //generateSkyboxBuffer(skyboxVertices, skyboxIndices);
+    unsigned int skyboxVAO = generateBuffer(box_sky);
     unsigned int catVAO = generateBuffer(cat);
 
     // Construct scene
@@ -298,7 +219,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     //rootNode->children.push_back(boxNode);
     rootNode->children.push_back(padNode);
     rootNode->children.push_back(ballNode);
-    rootNode->children.push_back(charTextureNode);
+    //rootNode->children.push_back(charTextureNode);
     padNode->children.push_back(catNode);
     //rootNode->children.push_back(boxNode);
 
@@ -390,10 +311,6 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     loadCubeMap(&skyboxTextureID, skyboxFaces);
     skyboxNode->textureID = skyboxTextureID;
     skyboxNode->isSkybox = true;
-
-    //boxNode->isSkybox = 1;
-    //boxNode->textureID = skyboxTextureID;
-    //boxNode->nodeType = GEOMETRY_2D;
 
 
 
@@ -607,9 +524,6 @@ void updateFrame(GLFWwindow* window) {
     view = cameraTransform;
     glUniform3fv(shader->getUniformFromName("ball_pos"), 1, glm::value_ptr(glm::vec3(ballNode->currentTransformationMatrix*glm::vec4(0,0,0,1))));
 
-    //RUN THIS TO DEALOCATE THE CAT AFTER PROGRAM FINISHES
-    //objl_FreeObj(&ObjFile);
-
 }
 
 void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar) {
@@ -682,9 +596,6 @@ void renderNode(SceneNode* node) {
                 }
                 else{
                     glDepthMask(GL_FALSE); //We want the skabox to be all the way in the back
-
-                    //skyboxShader.use();
-                    // ... set view and projection matrix
 
                     //To do away with transelation
                     auto  view2 = glm::mat4(glm::mat3(view)); // store locally on stack

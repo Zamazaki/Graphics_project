@@ -43,8 +43,6 @@ vec3 reject(vec3 from, vec3 onto){
 const vec3 camerapos = vec3(0.0);
 vec3 surface_to_eye = normalize(camerapos - pos);
 const vec3 ambient_color = vec3(0.2, 0.2, 0.2);
-//const vec3 diffuse_color = vec3(0.2, 0.2, 0.5);
-//const vec3 specular_color = vec3(0.5, 0.2, 0.2);
 
 const float l_a = 0.001;
 const float l_b = 0.001;
@@ -54,8 +52,6 @@ const float soft_shadow_ball_radius = 5.0;
 
 void main()
 {
-    //float diffuse_intensity = 0.0;
-    //float specularintensity = 0.0;
     vec3 normalized_normal;
     if (is_2d == 0 && do_textures != 0){ // activates if we use textures and don't do 2d model. Perhaps I should have made a uniform solely to signify we have a normal map, but I am lazy and will implement it when it is necessary
         normalized_normal = normalize(vec3(normal_texture_color)); //Replace normal with normal texture if it exists
@@ -126,7 +122,6 @@ void main()
         }
     }
     else{ // is_2d
-        // also TODO: seems like my perspective is a bit wierd (ball moving on platform when it is fastened), ask Peder about it. UPDATE: asked Peder, it is appearantly part of the game
         color = diffuse_texture_color;
     }
 }
