@@ -18,17 +18,20 @@ uniform layout(location = 6) int do_textures;
 uniform layout(location = 7) int is_2d;
 uniform layout(location = 9) int do_roughness;
 uniform layout(location = 10) int is_skybox;
+uniform layout(location = 11) int do_metal_roughness;
 
 
 layout(binding = 0) uniform sampler2D diffuseTexture;
 layout(binding = 1) uniform sampler2D normalMap;
 layout(binding = 2) uniform sampler2D roughnessMap;
 layout(binding = 3) uniform samplerCube cubeMap;
+layout(binding = 4) uniform sampler2D metalRoughnessMap;
 
 
 vec4 diffuse_texture_color = texture(diffuseTexture, textureCoordinates);
 vec3 normal_texture_color = TBN*(texture(normalMap, textureCoordinates).xyz*2-1);
 vec4 roughness_texture = texture(roughnessMap, textureCoordinates);
+vec4 metal_roughness_texture = texture(metalRoughnessMap, textureCoordinates);
 
 
 float rand(vec2 co) { return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453); }
@@ -65,7 +68,12 @@ void main()
         sharpness_factor = 5/(length(roughness_texture)*length(roughness_texture));
     }
     else{
-        sharpness_factor = 32;
+        if(do_metal_roughness != 0){
+            sharpness_factor = 5/(length(metal_roughness_texture.g)*length(metal_roughness_texture.g));
+        }
+        else{
+            sharpness_factor = 32;
+        }
     }
 
     if(is_2d == 0){ // is 3d
@@ -110,12 +118,20 @@ void main()
                 }
                 
             }
-            //float refraction_ratio = 1.00/1.33;
-            vec3 I = normalize(pos - camerapos);
-            vec3 R = reflect(I, normalized_normal);
-            //vec3 R = refract(I, normalized_normal, refraction_ratio);
-            //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
-            color = vec4((texture(cubeMap, R).rgb + specular_out + ambient_color + dither(textureCoordinates)), 1.0); 
+            if(do_metal_roughness != 0){
+                vec3 I = normalize(pos - camerapos);
+                //vec3 R = reflect(I, normalized_normal);
+                vec3 R = reflect(I, normalize(normal));
+                color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+            }else {
+                //float refraction_ratio = 1.00/1.33;
+                vec3 I = normalize(pos - camerapos);
+                //vec3 R = reflect(I, normalized_normal);
+                vec3 R = reflect(I, normalize(normal));
+                //vec3 R = refract(I, normalized_normal, refraction_ratio);
+                //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+                color = vec4((texture(cubeMap, R).rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+            }
         }
         else{
             color = texture(cubeMap, normalize(pos - camerapos));//vec4(1.0, 0.0, 0.0, 1.0);

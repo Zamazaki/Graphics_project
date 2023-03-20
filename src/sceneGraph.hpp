@@ -29,6 +29,7 @@ struct SceneNode {
 		textureID = -1;
 		lightID = -1;
 		roughnessMapID = -1;
+		metalRoughnessMapID = -1;
 		isSkybox = false;
 
         nodeType = type;
@@ -68,6 +69,9 @@ struct SceneNode {
 
 	// If node has roughness texture we must have id for that as well
 	int roughnessMapID;
+
+	// If node has metal and roughness maps combined in one map
+	int metalRoughnessMapID;
 
 	// If node is skybox, 1 for yes, 0 for no
 	bool isSkybox;

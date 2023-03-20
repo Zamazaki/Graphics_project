@@ -180,7 +180,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh pad = cube(padDimensions, glm::vec2(30, 40), true);
     Mesh box = cube(boxDimensions, glm::vec2(90), true, true);
     Mesh sphere = generateSphere(1.0, 40, 40);
-    Mesh cat = loadObj("../res/catlucky.obj");
+    Mesh cat = loadObj("../res/catlucky2.obj");
     Mesh box_sky = cube(boxDimensions, glm::vec2(100), true, true);
 
     // Fill buffers
@@ -212,7 +212,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
     lightSources[0].lightNode->position = glm::vec3(-10.0, 0.0, 5.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 0.0, 5.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 50.0, 20.0);
     lightSources[2].lightNode->position = glm::vec3( 10.0, 0.0, 5.0);
 
     rootNode->children.push_back(skyboxNode);
@@ -227,8 +227,8 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     //addChild(ballNode, lightSources[1].lightNode);
     //addChild(boxNode, lightSources[2].lightNode);
 
-    //addChild(rootNode, lightSources[0].lightNode);
-    addChild(rootNode, lightSources[1].lightNode);
+    addChild(rootNode, lightSources[0].lightNode);
+    //addChild(rootNode, lightSources[1].lightNode);
     addChild(rootNode, lightSources[2].lightNode);
 
 
@@ -243,8 +243,8 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     catNode->vertexArrayObjectID  = catVAO;
     catNode->VAOIndexCount        = cat.indices.size();
-    catNode->scale                = glm::vec3(2.5);
-    catNode->position             = glm::vec3(-25.0, 0.0, 0.0);
+    catNode->scale                = glm::vec3(5);
+    //catNode->position             = glm::vec3(-50.0, 0.0, 0.0);
     
 
     // Texture time
@@ -289,22 +289,22 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     uploadTexture(&normal_cat_id, normal_cat);
     catNode->normalMapTextureID = normal_cat_id;
 
-    /*PNGImage rough_cat =  loadPNGFile("../res/textures/Brick03_rgh.png");
-    GLuint rough_cat_id;
-    uploadTexture(&rough_cat_id, rough_cat);
-    catNode->roughnessMapID = rough_cat_id;*/
+    PNGImage metal_rough_cat =  loadPNGFile("../res/textures/Brick03_rgh.png");
+    GLuint metal_rough_cat_id;
+    uploadTexture(&metal_rough_cat_id, metal_rough_cat);
+    catNode->metalRoughnessMapID = metal_rough_cat_id;
 
     // I will attempt to construct my skybox here
     skyboxNode->vertexArrayObjectID = skyboxVAO;
     skyboxNode->VAOIndexCount       = box_sky.indices.size(); //skyboxIndices.size();
 
     std::vector<std::string> skyboxFaces {
-        "../res/textures/cubemap/negx.jpg", //left
         "../res/textures/cubemap/posx.jpg", //right
+        "../res/textures/cubemap/negx.jpg", //left
         "../res/textures/cubemap/posy.jpg", //top
         "../res/textures/cubemap/negy.jpg", //bottom
-        "../res/textures/cubemap/negz.jpg", //front
         "../res/textures/cubemap/posz.jpg", //back
+        "../res/textures/cubemap/negz.jpg", //front
     };
 
     GLuint skyboxTextureID;
@@ -576,6 +576,13 @@ void renderNode(SceneNode* node) {
         glBindTextureUnit(2, node->roughnessMapID);
     } else  {
         glUniform1i(9, 0); // no roughness
+    }
+
+    if (node->metalRoughnessMapID != -1) {
+        glUniform1i(11, 1); // metal roughness
+        glBindTextureUnit(4, node->metalRoughnessMapID);
+    } else  {
+        glUniform1i(11, 0); // no metal roughness
     }
 
     if (node->isSkybox){

@@ -25,7 +25,8 @@ out layout(location = 3) mat3 TBN;
 void main()
 {   
     //TBN is mostly stolen from the tutorial
-    vec3 vertexNormal_cameraspace = normal_matrix * normalize(normal_in);
+    //vec3 vertexNormal_cameraspace = normal_matrix * normalize(normal_in);
+    vec3 vertexNormal_cameraspace = normal_matrix * normalize(cross(indexed_bitangents, indexed_tangents));
     vec3 vertexTangent_cameraspace = normal_matrix * normalize(indexed_tangents);
     vec3 vertexBitangent_cameraspace = normal_matrix * normalize(indexed_bitangents);
 
