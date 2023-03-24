@@ -44,6 +44,11 @@ SceneNode* skyboxNode;
 SceneNode* catNode;
 
 double ballRadius = 3.0f;
+bool dynamicCubeReady = false;
+
+GLuint cubemap;
+GLuint framebuffer;
+GLuint depthbuffer;
 
 // These are heap allocated, because they should not be initialised at the start of the program
 sf::SoundBuffer* buffer;
@@ -312,7 +317,8 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     skyboxNode->textureID = skyboxTextureID;
     skyboxNode->isSkybox = true;
 
-
+    initDynamicCube(&cubemap, &framebuffer, &depthbuffer); // Init the hidden cubemap
+    endDynamicCubeMap(); // We don't actually want to draw to it right now, so we switch back to regular framebuffer
 
     getTimeDeltaSeconds();
 
@@ -324,6 +330,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 // Global boys that let's us seperate MVP
 glm::mat4 projection;
 glm::mat4 view;
+glm::vec3 cameraPosition;
 
 void updateFrame(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -483,7 +490,7 @@ void updateFrame(GLFWwindow* window) {
 
     projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
 
-    glm::vec3 cameraPosition = glm::vec3(0, 2, -20);
+    cameraPosition = glm::vec3(0, 2, -20);
 
 
     // rotate skybox lol
@@ -593,6 +600,14 @@ void renderNode(SceneNode* node) {
         glUniform1i(10, 0);
     }
 
+    if(dynamicCubeReady){
+        glUniform1i(12, 1);
+        glBindTextureUnit(5, cubemap);
+    }
+    else{
+        glUniform1i(12, 0);
+    }
+
     switch(node->nodeType) {
         case GEOMETRY:
             if(node->vertexArrayObjectID != -1) {
@@ -626,6 +641,9 @@ void renderNode(SceneNode* node) {
                 glUniform1i(7, 0); // is_3d
                 glBindTextureUnit(1, node->normalMapTextureID);
                 glBindVertexArray(node->vertexArrayObjectID);
+
+
+
                 glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
             }
             break;
@@ -652,6 +670,32 @@ void renderFrame(GLFWwindow* window) {
     glUniform3fv(shader->getUniformFromName("lights"), 3, glm::value_ptr(lights[0]));
     /**/
 
-   
+    //Saving original view and projection before copying sides
+    auto original_projection = projection;
+    auto original_view = view;
+    auto original_cameraPosition = cameraPosition;
+
+    dynamicCubeReady = false;
+
+    // Bind our initialized framebuffer and hidden cubemap texture
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    for (int i; i < 6; i++){
+        getDynamicCubeSides(cubemap, i, &projection, &view, cameraPosition);
+        renderNode(rootNode);
+    }
+ 
+    //Reset view and projecteion afer stealing the sides
+    glViewport(0, 0, windowWidth, windowHeight);
+    projection = original_projection;
+    view = original_view;
+    cameraPosition = original_cameraPosition;
+
+    endDynamicCubeMap();
+
+    dynamicCubeReady = true;
     renderNode(rootNode);
+    
 }

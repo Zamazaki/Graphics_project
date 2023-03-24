@@ -19,6 +19,7 @@ uniform layout(location = 7) int is_2d;
 uniform layout(location = 9) int do_roughness;
 uniform layout(location = 10) int is_skybox;
 uniform layout(location = 11) int do_metal_roughness;
+uniform layout(location = 12) int dynamicCube;
 
 
 layout(binding = 0) uniform sampler2D diffuseTexture;
@@ -26,6 +27,7 @@ layout(binding = 1) uniform sampler2D normalMap;
 layout(binding = 2) uniform sampler2D roughnessMap;
 layout(binding = 3) uniform samplerCube cubeMap;
 layout(binding = 4) uniform sampler2D metalRoughnessMap;
+layout(binding = 5) uniform samplerCube dynamicCubeMap;
 
 
 vec4 diffuse_texture_color = texture(diffuseTexture, textureCoordinates);
@@ -118,11 +120,21 @@ void main()
                 }
                 
             }
-            if(do_metal_roughness != 0){
+            /*samplerCube activeCubeMap = cubeMap;
+            if (dynamicCube == 1){
+                activeCubeMap = dynamicCubeMap;
+            }*/
+            if(do_metal_roughness != 0){ // Right now metal roughness does not affect anything but roughness, which is whay both results of the if are the same
                 vec3 I = normalize(pos - camerapos);
                 //vec3 R = reflect(I, normalized_normal);
-                vec3 R = reflect(I, normalize(normal));
-                color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+                vec3 R = reflect(I, normalize(normal)); //When cat only use regular normal, and not TBN normal
+                if (dynamicCube == 1){
+                    color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+                }
+                else{
+                    color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+
+                }
             }else {
                 //float refraction_ratio = 1.00/1.33;
                 vec3 I = normalize(pos - camerapos);
@@ -134,7 +146,8 @@ void main()
             }
         }
         else{
-            color = texture(cubeMap, normalize(pos - camerapos));//vec4(1.0, 0.0, 0.0, 1.0);
+            // Set cuneMap to dynamicCubeMap here to see what we sample for the dynamic cubemap
+            color = texture(cubeMap, normalize(pos - camerapos)); // The sky box
         }
     }
     else{ // is_2d

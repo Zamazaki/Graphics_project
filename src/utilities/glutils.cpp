@@ -1,7 +1,12 @@
+#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glad/glad.h>
 #include <program.hpp>
 #include "glutils.h"
 #include <vector>
+#include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -98,13 +103,11 @@ unsigned int generateBuffer(Mesh &mesh) {
 }
 
 // I borrowed this from the opencl tutorial, if I need to reimplement it myself I can do that as well
-void loadCubeMap(GLuint *unbound_int, std::vector<std::string> faces)
-{
-    //unsigned int textureID;
+void loadCubeMap(GLuint *unbound_int, std::vector<std::string> faces){
     glGenTextures(1, unbound_int);
     glBindTexture(GL_TEXTURE_CUBE_MAP, *unbound_int);
 
-    int width, height, nrChannels;
+    int width, height, nrChannels; // (Cubemap width and height is 2048)
     for (unsigned int i = 0; i < faces.size(); i++)
     {
         unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
@@ -117,14 +120,111 @@ void loadCubeMap(GLuint *unbound_int, std::vector<std::string> faces)
         }
         else
         {
-            //std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+            std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
             stbi_image_free(data);
         }
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);  
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);  
+
+}
+
+
+void initDynamicCube(GLuint *cubemap, GLuint *framebuffer, GLuint *depthbuffer){
+    // create the fbo
+    glGenFramebuffers(1, framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, *framebuffer);
+
+    // create the cubemap
+    glGenTextures(1, cubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, *cubemap);
+    
+
+    // set textures
+    for (int i = 0; i < 6; ++i){
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 2048, 2048, 0, GL_RGB, GL_UNSIGNED_BYTE, 0); //Same heigh and with as regular cubemap
+    }
+
+    // Texture settings
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+    // create the uniform depth buffer
+    glGenRenderbuffers(1, depthbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, *depthbuffer);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 2048, 2048);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        
+    // attach it
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *framebuffer);
+    // attach only the +X cubemap texture (for completeness)
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, *cubemap, 0);
+}
 
-} 
+
+void getDynamicCubeSides(GLuint cubemap, int face, glm::mat4 *projection, glm::mat4 *view, glm::vec3 cameraPosition){
+    //Change viewport when drawing
+    glViewport(0, 0, 2048, 2048); 
+
+    // attach new texture and renderbuffer to fbo 
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)face, cubemap, 0);
+        
+    // clear
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+    //glMatrixMode(GL_PROJECTION);
+    //glLoadIdentity();
+  
+
+    *projection =  glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 350.f); //Change aspect ratio into nice squares
+
+    //glMatrixMode(GL_MODELVIEW);
+    //glLoadIdentity();
+        
+
+    // setup lookat depending on current face
+    switch (face)
+    {
+        case 0: //POSITIVE_X  
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); 
+            break;
+                
+        case 1:  //NEGATIVE_X
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+            break;
+                
+        case 2:  //POSITIVE_Y
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 10.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+            break;
+                
+        case 3:  //NEGATIVE_Y
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, -10.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
+            break;
+                
+        case 4:  //POSITIVE_Z
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 10.0), glm::vec3(0.0, -1.0, 0.0));
+            break;
+                
+        case 5:  //NEGATIVE_Z
+            *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -10.0), glm::vec3(0.0, -1.0, 0.0));
+            break;
+                
+        default:
+            break;
+    };
+
+    //*view = *view * glm::translate(-cameraPosition); //glTranslatef(-renderPosition.x, -renderPosition.y, -renderPosition.z);
+    
+}
+
+void endDynamicCubeMap(){
+    // disable
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);    
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
