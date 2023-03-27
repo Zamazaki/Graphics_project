@@ -39,6 +39,7 @@ SceneNode* rootNode;
 SceneNode* charTextureNode;
 SceneNode* boxNode;
 SceneNode* ballNode;
+SceneNode* ballNode2;
 SceneNode* padNode;
 SceneNode* skyboxNode;
 SceneNode* catNode;
@@ -201,6 +202,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     boxNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
     padNode  = createSceneNode(GEOMETRY);
     ballNode = createSceneNode(GEOMETRY);
+    ballNode2 = createSceneNode(GEOMETRY);
     skyboxNode = createSceneNode(GEOMETRY);
     catNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
 
@@ -216,9 +218,9 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
-    lightSources[0].lightNode->position = glm::vec3(-10.0, 0.0, 5.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 50.0, 20.0);
-    lightSources[2].lightNode->position = glm::vec3( 10.0, 0.0, 5.0);
+    lightSources[0].lightNode->position = glm::vec3(-10.0, 4.0, -50.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 50.0, -30.0);
+    lightSources[2].lightNode->position = glm::vec3( 10.0, 10.0, -55.0);
 
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
@@ -226,10 +228,11 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(ballNode);
     //rootNode->children.push_back(charTextureNode);
     padNode->children.push_back(catNode);
+    rootNode->children.push_back(ballNode2);
     //rootNode->children.push_back(boxNode);
 
-    addChild(padNode, lightSources[1].lightNode);
-    //addChild(ballNode, lightSources[1].lightNode);
+    //addChild(padNode, lightSources[1].lightNode);
+    addChild(ballNode, lightSources[1].lightNode);
     //addChild(boxNode, lightSources[2].lightNode);
 
     addChild(rootNode, lightSources[0].lightNode);
@@ -245,6 +248,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     ballNode->vertexArrayObjectID = ballVAO;
     ballNode->VAOIndexCount       = sphere.indices.size();
+
+    ballNode2->vertexArrayObjectID = ballVAO;
+    ballNode2->VAOIndexCount       = sphere.indices.size();
+    ballNode2->position            = glm::vec3(10, -20, -60);
+    ballNode2->scale               = glm::vec3(4.0);
+
 
     catNode->vertexArrayObjectID  = catVAO;
     catNode->VAOIndexCount        = cat.indices.size();
@@ -301,7 +310,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     // I will attempt to construct my skybox here
     skyboxNode->vertexArrayObjectID = skyboxVAO;
-    skyboxNode->VAOIndexCount       = box_sky.indices.size(); //skyboxIndices.size();
+    skyboxNode->VAOIndexCount       = box_sky.indices.size(); 
 
     std::vector<std::string> skyboxFaces {
         "../res/textures/cubemap/posx.jpg", //right
@@ -318,7 +327,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     skyboxNode->isSkybox = true;
 
     initDynamicCube(&cubemap, &framebuffer, &depthbuffer); // Init the hidden cubemap
-    endDynamicCubeMap(); // We don't actually want to draw to it right now, so we switch back to regular framebuffer
+    //endDynamicCubeMap(); // We don't actually want to draw to it right now, so we switch back to regular framebuffer
 
     getTimeDeltaSeconds();
 
@@ -494,7 +503,7 @@ void updateFrame(GLFWwindow* window) {
 
 
     // rotate skybox lol
-    skyboxNode->rotation.y += timeDelta / 10;
+    skyboxNode->rotation.y += timeDelta / 2;
 
 
     //glUniform3fv(6, 1, glm::value_ptr(cameraPosition)); // Send camera position to fragement shader
@@ -659,7 +668,7 @@ void renderNode(SceneNode* node) {
 void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
-    glViewport(0, 0, windowWidth, windowHeight);
+    //glViewport(0, 0, windowWidth, windowHeight);
 
     // set light uniforms, only applies to currently loaded shader
     /** /
@@ -678,22 +687,31 @@ void renderFrame(GLFWwindow* window) {
     dynamicCubeReady = false;
 
     // Bind our initialized framebuffer and hidden cubemap texture
+    //glBindFramebuffer(GL_FRAMEBUFFER, depthbuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    glViewport(0, 0, 2048, 2048); 
+
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (int i; i < 6; i++){
-        getDynamicCubeSides(cubemap, i, &projection, &view, cameraPosition);
+        //getDynamicCubeSides(cubemap, i, &projection, &view, cameraPosition);
+        //getDynamicCubeSides(framebuffer, i, &projection, &view, glm::vec3(catNode->currentTransformationMatrix * glm::vec4(0,0,0,1)));
+        getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(ballNode2->currentTransformationMatrix * glm::vec4(0,0,0,1))); // sampling from ball2 position
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         renderNode(rootNode);
     }
  
-    //Reset view and projecteion afer stealing the sides
+    //Reset view and projection afer stealing the sides
     glViewport(0, 0, windowWidth, windowHeight);
     projection = original_projection;
     view = original_view;
     cameraPosition = original_cameraPosition;
 
     endDynamicCubeMap();
+
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 
     dynamicCubeReady = true;
     renderNode(rootNode);

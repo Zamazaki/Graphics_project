@@ -147,7 +147,12 @@ void main()
         }
         else{
             // Set cuneMap to dynamicCubeMap here to see what we sample for the dynamic cubemap
-            color = texture(cubeMap, normalize(pos - camerapos)); // The sky box
+            if (dynamicCube == 1){
+                color = texture(dynamicCubeMap, normalize(pos - camerapos)); // The dynamic box
+            }
+            else {
+                color = texture(cubeMap, normalize(pos - camerapos)); // The sky box
+            }
         }
     }
     else{ // is_2d

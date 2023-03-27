@@ -162,21 +162,26 @@ void initDynamicCube(GLuint *cubemap, GLuint *framebuffer, GLuint *depthbuffer){
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
         
     // attach it
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *framebuffer);
+    //glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *framebuffer);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, *depthbuffer);
     // attach only the +X cubemap texture (for completeness)
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, *cubemap, 0);
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 }
 
 
-void getDynamicCubeSides(GLuint cubemap, int face, glm::mat4 *projection, glm::mat4 *view, glm::vec3 cameraPosition){
+void getDynamicCubeSides(GLuint framebuffer, int face, glm::mat4 *projection, glm::mat4 *view, glm::vec3 cameraPosition){
     //Change viewport when drawing
-    glViewport(0, 0, 2048, 2048); 
+    //glViewport(0, 0, 2048, 2048); 
 
     // attach new texture and renderbuffer to fbo 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)face, cubemap, 0);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)face, cubemap, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, (GL_TEXTURE_CUBE_MAP_POSITIVE_X + (int)face), framebuffer, 0);
         
     // clear
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //glMatrixMode(GL_PROJECTION);
     //glLoadIdentity();
@@ -189,29 +194,29 @@ void getDynamicCubeSides(GLuint cubemap, int face, glm::mat4 *projection, glm::m
         
 
     // setup lookat depending on current face
-    switch (face)
+    switch (GL_TEXTURE_CUBE_MAP_POSITIVE_X + face)
     {
-        case 0: //POSITIVE_X  
+        case GL_TEXTURE_CUBE_MAP_POSITIVE_X: //POSITIVE_X  
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); 
             break;
                 
-        case 1:  //NEGATIVE_X
+        case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:  //NEGATIVE_X
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
             break;
                 
-        case 2:  //POSITIVE_Y
+        case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:  //POSITIVE_Y
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 10.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
             break;
                 
-        case 3:  //NEGATIVE_Y
+        case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:  //NEGATIVE_Y
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, -10.0, 0.0), glm::vec3(0.0, 0.0, -1.0));
             break;
                 
-        case 4:  //POSITIVE_Z
+        case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:  //POSITIVE_Z
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 10.0), glm::vec3(0.0, -1.0, 0.0));
             break;
                 
-        case 5:  //NEGATIVE_Z
+        case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:  //NEGATIVE_Z
             *view = glm::lookAt( glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, -10.0), glm::vec3(0.0, -1.0, 0.0));
             break;
                 
@@ -219,7 +224,9 @@ void getDynamicCubeSides(GLuint cubemap, int face, glm::mat4 *projection, glm::m
             break;
     };
 
-    //*view = *view * glm::translate(-cameraPosition); //glTranslatef(-renderPosition.x, -renderPosition.y, -renderPosition.z);
+    //*view = glm::translate(-cameraPosition) * (*view); //glTranslatef(-renderPosition.x, -renderPosition.y, -renderPosition.z);
+    *view =  (*view) * glm::translate(-cameraPosition); //glTranslatef(-renderPosition.x, -renderPosition.y, -renderPosition.z);
+    //*view = glm::translate(-glm::vec3(10, -20, -40)) * (*view);
     
 }
 
