@@ -120,13 +120,10 @@ void main()
                 }
                 
             }
-            /*samplerCube activeCubeMap = cubeMap;
-            if (dynamicCube == 1){
-                activeCubeMap = dynamicCubeMap;
-            }*/
+
             if(do_metal_roughness != 0){ // Right now metal roughness does not affect anything but roughness, which is whay both results of the if are the same
                 vec3 I = normalize(pos - camerapos);
-                //vec3 R = reflect(I, normalized_normal);
+                //vec3 R = reflect(I, normalized_normal); // This one is for if we want refraction instead
                 vec3 R = reflect(I, normalize(normal)); //When cat only use regular normal, and not TBN normal
                 if (dynamicCube == 1){
                     color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
@@ -146,9 +143,8 @@ void main()
             }
         }
         else{
-            // Set cuneMap to dynamicCubeMap here to see what we sample for the dynamic cubemap
             if (dynamicCube == 1){
-                color = texture(dynamicCubeMap, normalize(pos - camerapos)); // The dynamic box
+                color = texture(dynamicCubeMap, normalize(pos - camerapos)); // The dynamic box (only drawn at skybox for debug purposes)
             }
             else {
                 color = texture(cubeMap, normalize(pos - camerapos)); // The sky box

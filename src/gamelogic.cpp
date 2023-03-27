@@ -668,16 +668,16 @@ void renderNode(SceneNode* node) {
 void renderFrame(GLFWwindow* window) {
     int windowWidth, windowHeight;
     glfwGetWindowSize(window, &windowWidth, &windowHeight);
-    //glViewport(0, 0, windowWidth, windowHeight);
+
 
     // set light uniforms, only applies to currently loaded shader
-    /** /
+    /*
     glm::vec3 lights[3];
     for (int i = 0; i < 3; i++) {
         lights[i] = glm::vec3(lightSources[i].lightNode->currentTransformationMatrix * glm::vec4(0,0,0,1)); //extract the position of each light
     }
     glUniform3fv(shader->getUniformFromName("lights"), 3, glm::value_ptr(lights[0]));
-    /**/
+    */
 
     //Saving original view and projection before copying sides
     auto original_projection = projection;
@@ -686,17 +686,12 @@ void renderFrame(GLFWwindow* window) {
 
     dynamicCubeReady = false;
 
-    // Bind our initialized framebuffer and hidden cubemap texture
-    //glBindFramebuffer(GL_FRAMEBUFFER, depthbuffer);
+    // Bind our initialized framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glViewport(0, 0, 2048, 2048); 
-
-    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (int i; i < 6; i++){
-        //getDynamicCubeSides(cubemap, i, &projection, &view, cameraPosition);
-        //getDynamicCubeSides(framebuffer, i, &projection, &view, glm::vec3(catNode->currentTransformationMatrix * glm::vec4(0,0,0,1)));
         getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(ballNode2->currentTransformationMatrix * glm::vec4(0,0,0,1))); // sampling from ball2 position
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         renderNode(rootNode);
@@ -709,9 +704,6 @@ void renderFrame(GLFWwindow* window) {
     cameraPosition = original_cameraPosition;
 
     endDynamicCubeMap();
-
-    //glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 
     dynamicCubeReady = true;
     renderNode(rootNode);
