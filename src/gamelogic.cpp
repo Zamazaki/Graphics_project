@@ -22,6 +22,7 @@
 #include "utilities/glfont.h"
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+#include <utilities/camera.hpp>
 
 enum KeyFrameAction {
     BOTTOM, TOP
@@ -43,6 +44,7 @@ SceneNode* ballNode2;
 SceneNode* padNode;
 SceneNode* skyboxNode;
 SceneNode* catNode;
+//SceneNode* stoneNode;
 
 double ballRadius = 3.0f;
 bool dynamicCubeReady = false;
@@ -61,6 +63,7 @@ const glm::vec3 padDimensions(30, 3, 40);
 
 glm::vec3 ballPosition(0, ballRadius + padDimensions.y, boxDimensions.z / 2);
 glm::vec3 ballDirection(1, 1, 0.2f);
+Gloom::Camera camera;
 
 CommandLineOptions options;
 
@@ -188,6 +191,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh sphere = generateSphere(1.0, 40, 40);
     Mesh cat = loadObj("../res/catlucky2.obj");
     Mesh box_sky = cube(boxDimensions, glm::vec2(100), true, true);
+    //Mesh stone = loadObj("../res/textures/stone/source/final_stone.obj");
 
     // Fill buffers
     unsigned int ballVAO = generateBuffer(sphere);
@@ -195,6 +199,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     unsigned int padVAO  = generateBuffer(pad);
     unsigned int skyboxVAO = generateBuffer(box_sky);
     unsigned int catVAO = generateBuffer(cat);
+    //unsigned int stoneVAO = generateBuffer(stone);
 
     // Construct scene
     rootNode = createSceneNode(GEOMETRY);
@@ -205,6 +210,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     ballNode2 = createSceneNode(GEOMETRY);
     skyboxNode = createSceneNode(GEOMETRY);
     catNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
+    //stoneNode = createSceneNode(GEOMETRY_NORMAL_MAPPED);
 
     lightSources[0].lightNode = createSceneNode(POINT_LIGHT);
     lightSources[1].lightNode = createSceneNode(POINT_LIGHT);
@@ -218,25 +224,27 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
-    lightSources[0].lightNode->position = glm::vec3(-10.0, 4.0, -50.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 50.0, -30.0);
-    lightSources[2].lightNode->position = glm::vec3( 10.0, 10.0, -55.0);
+    lightSources[0].lightNode->position = glm::vec3(0.0, 100.0, -50.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 100.0, -50.0);
+    lightSources[2].lightNode->position = glm::vec3( 0.0, 100.0, -50.0);
 
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
-    rootNode->children.push_back(padNode);
-    rootNode->children.push_back(ballNode);
+    //rootNode->children.push_back(padNode);
+    //rootNode->children.push_back(ballNode);
     //rootNode->children.push_back(charTextureNode);
-    padNode->children.push_back(catNode);
+    //padNode->children.push_back(catNode);
+    rootNode->children.push_back(catNode);
     rootNode->children.push_back(ballNode2);
+    //rootNode->children.push_back(stoneNode);
     //rootNode->children.push_back(boxNode);
 
     //addChild(padNode, lightSources[1].lightNode);
-    addChild(ballNode, lightSources[1].lightNode);
+    //addChild(ballNode, lightSources[1].lightNode);
     //addChild(boxNode, lightSources[2].lightNode);
 
     addChild(rootNode, lightSources[0].lightNode);
-    //addChild(rootNode, lightSources[1].lightNode);
+    addChild(rootNode, lightSources[1].lightNode);
     addChild(rootNode, lightSources[2].lightNode);
 
 
@@ -254,11 +262,15 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     ballNode2->position            = glm::vec3(10, -20, -60);
     ballNode2->scale               = glm::vec3(4.0);
 
-
     catNode->vertexArrayObjectID  = catVAO;
     catNode->VAOIndexCount        = cat.indices.size();
     catNode->scale                = glm::vec3(5);
-    //catNode->position             = glm::vec3(-50.0, 0.0, 0.0);
+    catNode->position             = glm::vec3(0.0, -10.0, -80.0);
+
+    /*stoneNode->vertexArrayObjectID  = stoneVAO;
+    stoneNode->VAOIndexCount        = stone.indices.size();
+    stoneNode->scale                = glm::vec3(10);
+    stoneNode->position             = glm::vec3(0.0, -20.0, -80.0);*/
     
 
     // Texture time
@@ -303,12 +315,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     uploadTexture(&normal_cat_id, normal_cat);
     catNode->normalMapTextureID = normal_cat_id;
 
-    PNGImage metal_rough_cat =  loadPNGFile("../res/textures/Brick03_rgh.png");
+    PNGImage metal_rough_cat =  loadPNGFile("../res/textures/cat_lucky/textures/maneki_white_metallicRoughness.png");
     GLuint metal_rough_cat_id;
     uploadTexture(&metal_rough_cat_id, metal_rough_cat);
     catNode->metalRoughnessMapID = metal_rough_cat_id;
 
-    // I will attempt to construct my skybox here
+    // Skybox time here
     skyboxNode->vertexArrayObjectID = skyboxVAO;
     skyboxNode->VAOIndexCount       = box_sky.indices.size(); 
 
@@ -326,8 +338,23 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     skyboxNode->textureID = skyboxTextureID;
     skyboxNode->isSkybox = true;
 
+    // Now it is stone time
+    /*PNGImage diffuse_stone =  loadPNGFile("../res/textures/stone3/textures/rock_more_moss_Diffuse.png");
+    GLuint diffuse_stone_id;
+    uploadTexture(&diffuse_stone_id, diffuse_stone);
+    stoneNode->textureID = diffuse_stone_id;
+
+    PNGImage normal_stone =  loadPNGFile("../res/textures/stone3/textures/normal_4k.png");
+    GLuint normal_stone_id;
+    uploadTexture(&normal_stone_id, normal_stone);
+    stoneNode->normalMapTextureID = normal_stone_id;
+
+    PNGImage metal_rough_stone =  loadPNGFile("../res/textures/cat_lucky/textures/moss_rock_roughness.png");
+    GLuint metal_rough_stone_id;
+    uploadTexture(&metal_rough_stone_id, metal_rough_stone);
+    catNode->metalRoughnessMapID = metal_rough_stone_id;*/
+
     initDynamicCube(&cubemap, &framebuffer, &depthbuffer); // Init the hidden cubemap
-    //endDynamicCubeMap(); // We don't actually want to draw to it right now, so we switch back to regular framebuffer
 
     getTimeDeltaSeconds();
 
@@ -341,12 +368,29 @@ glm::mat4 projection;
 glm::mat4 view;
 glm::vec3 cameraPosition;
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    camera.handleKeyboardInputs(key, action);
+}
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{   
+    camera.handleCursorPosInput(xpos, ypos);
+}
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    camera.handleMouseButtonInputs(button, action);
+}
+
+
 void updateFrame(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
 
     double timeDelta = getTimeDeltaSeconds();
 
-    const float ballBottomY = boxNode->position.y - (boxDimensions.y/2) + ballRadius + padDimensions.y;
+    /*const float ballBottomY = boxNode->position.y - (boxDimensions.y/2) + ballRadius + padDimensions.y;
     const float ballTopY    = boxNode->position.y + (boxDimensions.y/2) - ballRadius;
     const float BallVerticalTravelDistance = ballTopY - ballBottomY;
 
@@ -495,7 +539,7 @@ void updateFrame(GLFWwindow* window) {
                 }
             }
         }
-    }
+    }*/
 
     projection = glm::perspective(glm::radians(80.0f), float(windowWidth) / float(windowHeight), 0.1f, 350.f);
 
@@ -503,17 +547,17 @@ void updateFrame(GLFWwindow* window) {
 
 
     // rotate skybox lol
-    skyboxNode->rotation.y += timeDelta / 2;
+    //skyboxNode->rotation.y += timeDelta / 2;
 
 
     //glUniform3fv(6, 1, glm::value_ptr(cameraPosition)); // Send camera position to fragement shader
 
     // Some math to make the camera move in a nice way
-    float lookRotation = -0.6 / (1 + exp(-5 * (padPositionX-0.5))) + 0.3;
+    /*float lookRotation = -0.6 / (1 + exp(-5 * (padPositionX-0.5))) + 0.3;
     glm::mat4 cameraTransform =
                     glm::rotate(0.3f + 0.2f * float(-padPositionZ*padPositionZ), glm::vec3(1, 0, 0)) *
                     glm::rotate(lookRotation, glm::vec3(0, 1, 0)) *
-                    glm::translate(-cameraPosition);
+                    glm::translate(-cameraPosition);*/
 
     /** /
     cameraTransform = glm::rotate(float(sin(totalElapsedTime)), glm::vec3(1, 0, 0)) *
@@ -524,7 +568,7 @@ void updateFrame(GLFWwindow* window) {
     //glm::mat4 VP = projection * cameraTransform;
 
     // Move and rotate various SceneNodes
-    boxNode->position = { 0, -10, -80 };
+    /*boxNode->position = { 0, -10, -80 };
 
     ballNode->position = ballPosition;
     ballNode->scale = glm::vec3(ballRadius);
@@ -534,10 +578,12 @@ void updateFrame(GLFWwindow* window) {
         boxNode->position.x - (boxDimensions.x/2) + (padDimensions.x/2) + (1 - padPositionX) * (boxDimensions.x - padDimensions.x),
         boxNode->position.y - (boxDimensions.y/2) + (padDimensions.y/2),
         boxNode->position.z - (boxDimensions.z/2) + (padDimensions.z/2) + (1 - padPositionZ) * (boxDimensions.z - padDimensions.z)
-    };
+    };*/
 
     updateNodeTransformations(rootNode, glm::identity<glm::mat4>());
-    view = cameraTransform;
+    //view = cameraTransform;
+    camera.updateCamera(timeDelta);
+    view = camera.getViewMatrix();
     glUniform3fv(shader->getUniformFromName("ball_pos"), 1, glm::value_ptr(glm::vec3(ballNode->currentTransformationMatrix*glm::vec4(0,0,0,1))));
 
 }
@@ -650,8 +696,6 @@ void renderNode(SceneNode* node) {
                 glUniform1i(7, 0); // is_3d
                 glBindTextureUnit(1, node->normalMapTextureID);
                 glBindVertexArray(node->vertexArrayObjectID);
-
-
 
                 glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
             }

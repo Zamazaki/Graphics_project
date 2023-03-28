@@ -123,7 +123,7 @@ void main()
 
             if(do_metal_roughness != 0){ // Right now metal roughness does not affect anything but roughness, which is whay both results of the if are the same
                 vec3 I = normalize(pos - camerapos);
-                //vec3 R = reflect(I, normalized_normal); // This one is for if we want refraction instead
+                //vec3 R = reflect(I, normalized_normal);
                 vec3 R = reflect(I, normalize(normal)); //When cat only use regular normal, and not TBN normal
                 if (dynamicCube == 1){
                     color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
@@ -133,13 +133,14 @@ void main()
 
                 }
             }else {
-                //float refraction_ratio = 1.00/1.33;
+                float refraction_ratio = 1.00/1.33;
                 vec3 I = normalize(pos - camerapos);
                 //vec3 R = reflect(I, normalized_normal);
-                vec3 R = reflect(I, normalize(normal));
-                //vec3 R = refract(I, normalized_normal, refraction_ratio);
+                //vec3 R = reflect(I, normalize(normal));
+                vec3 R = refract(I, normalized_normal, refraction_ratio);
                 //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
                 color = vec4((texture(cubeMap, R).rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+                //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
             }
         }
         else{
