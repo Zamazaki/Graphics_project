@@ -41,6 +41,7 @@ SceneNode* charTextureNode;
 SceneNode* boxNode;
 SceneNode* ballNode;
 SceneNode* ballNode2;
+SceneNode* ballNode3;
 SceneNode* padNode;
 SceneNode* skyboxNode;
 SceneNode* catNode;
@@ -208,6 +209,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     padNode  = createSceneNode(GEOMETRY);
     ballNode = createSceneNode(GEOMETRY);
     ballNode2 = createSceneNode(GEOMETRY);
+    ballNode3 = createSceneNode(GEOMETRY);
     skyboxNode = createSceneNode(GEOMETRY);
     catNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
     //stoneNode = createSceneNode(GEOMETRY_NORMAL_MAPPED);
@@ -231,11 +233,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
     //rootNode->children.push_back(padNode);
-    //rootNode->children.push_back(ballNode);
+    rootNode->children.push_back(ballNode);
     //rootNode->children.push_back(charTextureNode);
     //padNode->children.push_back(catNode);
     rootNode->children.push_back(catNode);
     rootNode->children.push_back(ballNode2);
+    rootNode->children.push_back(ballNode3);
     //rootNode->children.push_back(stoneNode);
     //rootNode->children.push_back(boxNode);
 
@@ -256,16 +259,23 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
     ballNode->vertexArrayObjectID = ballVAO;
     ballNode->VAOIndexCount       = sphere.indices.size();
+    ballNode->position            = glm::vec3(30.0, -20, -70);
+    ballNode->scale               = glm::vec3(8.0);
 
     ballNode2->vertexArrayObjectID = ballVAO;
     ballNode2->VAOIndexCount       = sphere.indices.size();
     ballNode2->position            = glm::vec3(10, -20, -60);
-    ballNode2->scale               = glm::vec3(4.0);
+    ballNode2->scale               = glm::vec3(8.0);
+
+    ballNode3->vertexArrayObjectID = ballVAO;
+    ballNode3->VAOIndexCount       = sphere.indices.size();
+    ballNode3->position            = glm::vec3(10, -20, -100);
+    ballNode3->scale               = glm::vec3(8.0);
 
     catNode->vertexArrayObjectID  = catVAO;
     catNode->VAOIndexCount        = cat.indices.size();
     catNode->scale                = glm::vec3(5);
-    catNode->position             = glm::vec3(0.0, -10.0, -80.0);
+    catNode->position             = glm::vec3(0.0, -30.0, -80.0);
 
     /*stoneNode->vertexArrayObjectID  = stoneVAO;
     stoneNode->VAOIndexCount        = stone.indices.size();
@@ -353,6 +363,22 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     GLuint metal_rough_stone_id;
     uploadTexture(&metal_rough_stone_id, metal_rough_stone);
     catNode->metalRoughnessMapID = metal_rough_stone_id;*/
+
+    //Colors for the balls (I'm lazy)
+    PNGImage red_ball =  loadPNGFile("../res/textures/Red.png");
+    GLuint red_ball_id;
+    uploadTexture(&red_ball_id, red_ball);
+    ballNode->textureID = red_ball_id;
+
+    PNGImage green_ball =  loadPNGFile("../res/textures/Green.png");
+    GLuint green_ball_id;
+    uploadTexture(&green_ball_id, green_ball);
+    ballNode2->textureID = green_ball_id;
+
+    PNGImage blue_ball =  loadPNGFile("../res/textures/Blue.png");
+    GLuint blue_ball_id;
+    uploadTexture(&blue_ball_id, blue_ball);
+    ballNode3->textureID = blue_ball_id;
 
     initDynamicCube(&cubemap, &framebuffer, &depthbuffer); // Init the hidden cubemap
 
@@ -692,7 +718,7 @@ void renderNode(SceneNode* node) {
             }
             break;
         case GEOMETRY_NORMAL_MAPPED:
-            if(node->vertexArrayObjectID != -1) {
+            if(node->vertexArrayObjectID != -1 && dynamicCubeReady) { // I don't render cat when sampeling for dynamic cubemap
                 glUniform1i(7, 0); // is_3d
                 glBindTextureUnit(1, node->normalMapTextureID);
                 glBindVertexArray(node->vertexArrayObjectID);
@@ -736,7 +762,7 @@ void renderFrame(GLFWwindow* window) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (int i; i < 6; i++){
-        getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(ballNode2->currentTransformationMatrix * glm::vec4(0,0,0,1))); // sampling from ball2 position
+        getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(0.0, -20.0, -80.0)); // cat position glm::vec3(catNode->currentTransformationMatrix * glm::vec4(0,0,0,1)))
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         renderNode(rootNode);
     }

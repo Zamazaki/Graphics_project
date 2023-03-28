@@ -129,6 +129,10 @@ void main()
                     color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
                 }
                 else{
+                    //float refraction_ratio = 1.00/1.33;
+                    vec3 R = reflect(I, normalize(normal));
+                    //vec3 R = refract(I, normalized_normal, refraction_ratio);
+                    //vec3 R = refract(I, normalize(normal), refraction_ratio);
                     color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
 
                 }
@@ -137,19 +141,20 @@ void main()
                 vec3 I = normalize(pos - camerapos);
                 //vec3 R = reflect(I, normalized_normal);
                 //vec3 R = reflect(I, normalize(normal));
-                vec3 R = refract(I, normalized_normal, refraction_ratio);
+                vec3 R = refract(I, normalize(normal), refraction_ratio);
                 //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
-                color = vec4((texture(cubeMap, R).rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+                color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
                 //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
             }
         }
         else{
-            if (dynamicCube == 1){
-                color = texture(dynamicCubeMap, normalize(pos - camerapos)); // The dynamic box (only drawn at skybox for debug purposes)
+            /*if (dynamicCube == 1){
+                color = texture(dynamicCubeMap, normalize(pos - camerapos)); // The dynamic box (only drawn at skybox for debug purposes, change to cubeMap when you are done)
             }
             else {
                 color = texture(cubeMap, normalize(pos - camerapos)); // The sky box
-            }
+            }*/
+            color = texture(cubeMap, normalize(pos - camerapos));
         }
     }
     else{ // is_2d
