@@ -45,10 +45,11 @@ SceneNode* ballNode3;
 SceneNode* padNode;
 SceneNode* skyboxNode;
 SceneNode* catNode;
-//SceneNode* stoneNode;
+SceneNode* stoneNode;
 
 double ballRadius = 3.0f;
 bool dynamicCubeReady = false;
+//bool cat_rot_pos = true;
 
 GLuint cubemap;
 GLuint framebuffer;
@@ -134,7 +135,7 @@ Mesh loadObj(std::string filename){
     std::vector<tinyobj::material_t> materials;
     std::string error;
     std::string warning;
-    tinyobj::LoadObj(&attributes, &shapes, &materials, &warning, &error, filename.c_str(), nullptr, false);
+    tinyobj::LoadObj(&attributes, &shapes, &materials, &warning, &error, filename.c_str(), nullptr, true);
 
     Mesh m;
     if (shapes.size() > 1){
@@ -192,7 +193,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     Mesh sphere = generateSphere(1.0, 40, 40);
     Mesh cat = loadObj("../res/catlucky2.obj");
     Mesh box_sky = cube(boxDimensions, glm::vec2(100), true, true);
-    //Mesh stone = loadObj("../res/textures/stone/source/final_stone.obj");
+    Mesh stone = loadObj("../res/textures/stone/source/final_stone.obj");
 
     // Fill buffers
     unsigned int ballVAO = generateBuffer(sphere);
@@ -200,7 +201,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     unsigned int padVAO  = generateBuffer(pad);
     unsigned int skyboxVAO = generateBuffer(box_sky);
     unsigned int catVAO = generateBuffer(cat);
-    //unsigned int stoneVAO = generateBuffer(stone);
+    unsigned int stoneVAO = generateBuffer(stone);
 
     // Construct scene
     rootNode = createSceneNode(GEOMETRY);
@@ -212,7 +213,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     ballNode3 = createSceneNode(GEOMETRY);
     skyboxNode = createSceneNode(GEOMETRY);
     catNode  = createSceneNode(GEOMETRY_NORMAL_MAPPED);
-    //stoneNode = createSceneNode(GEOMETRY_NORMAL_MAPPED);
+    stoneNode = createSceneNode(GEOMETRY_NORMAL_MAPPED);
 
     lightSources[0].lightNode = createSceneNode(POINT_LIGHT);
     lightSources[1].lightNode = createSceneNode(POINT_LIGHT);
@@ -226,9 +227,9 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
-    lightSources[0].lightNode->position = glm::vec3(0.0, 100.0, -50.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 100.0, -50.0);
-    lightSources[2].lightNode->position = glm::vec3( 0.0, 100.0, -50.0);
+    lightSources[0].lightNode->position = glm::vec3(0.0, 300.0, -50.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 300.0, -50.0);
+    lightSources[2].lightNode->position = glm::vec3( 0.0, 300.0, -50.0);
 
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
@@ -236,10 +237,11 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     rootNode->children.push_back(ballNode);
     //rootNode->children.push_back(charTextureNode);
     //padNode->children.push_back(catNode);
+    rootNode->children.push_back(stoneNode);
     rootNode->children.push_back(catNode);
     rootNode->children.push_back(ballNode2);
     rootNode->children.push_back(ballNode3);
-    //rootNode->children.push_back(stoneNode);
+    
     //rootNode->children.push_back(boxNode);
 
     //addChild(padNode, lightSources[1].lightNode);
@@ -276,11 +278,12 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     catNode->VAOIndexCount        = cat.indices.size();
     catNode->scale                = glm::vec3(5);
     catNode->position             = glm::vec3(0.0, -30.0, -80.0);
+    catNode->rotation             = glm::vec3(0.0, 50.0, 0.0);
 
-    /*stoneNode->vertexArrayObjectID  = stoneVAO;
+    stoneNode->vertexArrayObjectID  = stoneVAO;
     stoneNode->VAOIndexCount        = stone.indices.size();
-    stoneNode->scale                = glm::vec3(10);
-    stoneNode->position             = glm::vec3(0.0, -20.0, -80.0);*/
+    stoneNode->scale                = glm::vec3(20);
+    stoneNode->position             = glm::vec3(-5.0, -60.0, -75.0);
     
 
     // Texture time
@@ -299,7 +302,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
 
 
     // Texture time, but now with normals and such
-    PNGImage diffuse_bricks =  loadPNGFile("../res/textures/Brick03_col.png");
+    /*PNGImage diffuse_bricks =  loadPNGFile("../res/textures/Brick03_col.png");
     GLuint diffuse_bricks_id;
     uploadTexture(&diffuse_bricks_id, diffuse_bricks);
     boxNode->textureID = diffuse_bricks_id;
@@ -312,7 +315,7 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     PNGImage rough_bricks =  loadPNGFile("../res/textures/Brick03_rgh.png");
     GLuint rough_bricks_id;
     uploadTexture(&rough_bricks_id, rough_bricks);
-    boxNode->roughnessMapID = rough_bricks_id;
+    boxNode->roughnessMapID = rough_bricks_id;*/
 
     // Cat texture time
     PNGImage diffuse_cat =  loadPNGFile("../res/textures/cat_lucky/textures/maneki_white_baseColor_gold.png");
@@ -348,18 +351,18 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     skyboxNode->textureID = skyboxTextureID;
     skyboxNode->isSkybox = true;
 
-    // Now it is stone time
-    /*PNGImage diffuse_stone =  loadPNGFile("../res/textures/stone3/textures/rock_more_moss_Diffuse.png");
+    // Now it is stone time (ok, perhaps not)
+    PNGImage diffuse_stone =  loadPNGFile("../res/textures/stone/textures/stone_color.png");
     GLuint diffuse_stone_id;
     uploadTexture(&diffuse_stone_id, diffuse_stone);
     stoneNode->textureID = diffuse_stone_id;
 
-    PNGImage normal_stone =  loadPNGFile("../res/textures/stone3/textures/normal_4k.png");
+    PNGImage normal_stone =  loadPNGFile("../res/textures/stone/textures/stone_normals.png");
     GLuint normal_stone_id;
     uploadTexture(&normal_stone_id, normal_stone);
     stoneNode->normalMapTextureID = normal_stone_id;
 
-    PNGImage metal_rough_stone =  loadPNGFile("../res/textures/cat_lucky/textures/moss_rock_roughness.png");
+    /*PNGImage metal_rough_stone =  loadPNGFile("../res/textures/stone3/textures/moss_rock_roughness.png");
     GLuint metal_rough_stone_id;
     uploadTexture(&metal_rough_stone_id, metal_rough_stone);
     catNode->metalRoughnessMapID = metal_rough_stone_id;*/
@@ -407,6 +410,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     camera.handleMouseButtonInputs(button, action);
 }
 
+//TODO: Find why reflection seems wrong/cover it up by moving the balls
 
 void updateFrame(GLFWwindow* window) {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -415,6 +419,31 @@ void updateFrame(GLFWwindow* window) {
     glfwSetCursorPosCallback(window, cursor_position_callback);
 
     double timeDelta = getTimeDeltaSeconds();
+    totalElapsedTime += timeDelta;
+
+    double deltaAngle = fmod(totalElapsedTime, 6.28);
+    double deltaAngle2 = fmod(totalElapsedTime/2, 6.28);
+    double deltaAngle3 = fmod(totalElapsedTime*2, 6.28);
+
+    ballNode->position = glm::vec3(catNode->position.x +  20 * cos( deltaAngle ), 0, catNode->position.z + 20* sin( deltaAngle ));
+    ballNode2->position = glm::vec3(catNode->position.x +  50 * cos( deltaAngle2 ), -20.0, catNode->position.z + 50* sin( deltaAngle2 ));
+    ballNode3->position = glm::vec3(catNode->position.x +  40 * cos( deltaAngle3 ), -10.0, catNode->position.z + 40* sin( deltaAngle3 ));
+
+
+    /*if(catNode->rotation.y >= 3.14){
+        cat_rot_pos = false;
+    }
+    if(catNode->rotation.y <= 0.0){
+        cat_rot_pos = true;
+    }
+
+    if(cat_rot_pos){
+        catNode->rotation.y += timeDelta;
+    }else{
+        catNode->rotation.y -= timeDelta;
+    }*/
+    
+    
 
     /*const float ballBottomY = boxNode->position.y - (boxDimensions.y/2) + ballRadius + padDimensions.y;
     const float ballTopY    = boxNode->position.y + (boxDimensions.y/2) - ballRadius;
@@ -627,7 +656,7 @@ void updateNodeTransformations(SceneNode* node, glm::mat4 transformationThusFar)
     node->currentTransformationMatrix = transformationThusFar * transformationMatrix; // M
 
     switch(node->nodeType) {
-        case GEOMETRY: break;
+        case GEOMETRY: break;rootNode->children.push_back(stoneNode);
         case SPOT_LIGHT: case POINT_LIGHT: 
             GLint pos_location = shader->getUniformFromName("light_info[" + std::to_string(node->lightID) + "].position");
             glUniform3fv(pos_location, 1, glm::value_ptr(glm::vec3(node->currentTransformationMatrix * glm::vec4(0,0,0,1))));
@@ -689,11 +718,20 @@ void renderNode(SceneNode* node) {
         glUniform1i(12, 0);
     }
 
+    if (node->normalMapTextureID != -1){
+        glUniform1i(13, 1);
+        glBindTextureUnit(1, node->normalMapTextureID);
+    }
+    else{
+        glUniform1i(13, 0);
+    }
+
     switch(node->nodeType) {
         case GEOMETRY:
             if(node->vertexArrayObjectID != -1) {
                 glUniform1i(7, 0); // is_3d
                 if (!node->isSkybox){
+                    glUniform1i(13, 0);
                     glBindVertexArray(node->vertexArrayObjectID);
                     glDrawElements(GL_TRIANGLES, node->VAOIndexCount, GL_UNSIGNED_INT, nullptr);
                 }

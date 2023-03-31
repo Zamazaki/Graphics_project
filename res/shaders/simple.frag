@@ -20,6 +20,8 @@ uniform layout(location = 9) int do_roughness;
 uniform layout(location = 10) int is_skybox;
 uniform layout(location = 11) int do_metal_roughness;
 uniform layout(location = 12) int dynamicCube;
+uniform layout(location = 8) mat4 V;
+uniform layout(location = 13) int has_normal_map;
 
 
 layout(binding = 0) uniform sampler2D diffuseTexture;
@@ -58,7 +60,7 @@ const float soft_shadow_ball_radius = 5.0;
 void main()
 {
     vec3 normalized_normal;
-    if (is_2d == 0 && do_textures != 0){ // activates if we use textures and don't do 2d model. Perhaps I should have made a uniform solely to signify we have a normal map, but I am lazy and will implement it when it is necessary
+    if (has_normal_map != 0){ // activates if we use textures and don't do 2d model
         normalized_normal = normalize(vec3(normal_texture_color)); //Replace normal with normal texture if it exists
     }
     else{
@@ -125,6 +127,7 @@ void main()
                 vec3 I = normalize(pos - camerapos);
                 //vec3 R = reflect(I, normalized_normal);
                 vec3 R = reflect(I, normalize(normal)); //When cat only use regular normal, and not TBN normal
+                R = normalize(inverse(mat3(V)) * R);
                 if (dynamicCube == 1){
                     color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
                 }
@@ -136,15 +139,20 @@ void main()
                     color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
 
                 }
-            }else {
-                float refraction_ratio = 1.00/1.33;
-                vec3 I = normalize(pos - camerapos);
-                //vec3 R = reflect(I, normalized_normal);
-                //vec3 R = reflect(I, normalize(normal));
-                vec3 R = refract(I, normalize(normal), refraction_ratio);
-                //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
-                color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
-                //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+            }else { 
+                if (has_normal_map == 1){ 
+                    color = vec4(diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates), 1.0); 
+                }
+                else{ // All other objects are refractive
+                    float refraction_ratio = 1.00/1.33;
+                    vec3 I = normalize(pos - camerapos);
+                    //vec3 R = reflect(I, normalized_normal);
+                    //vec3 R = reflect(I, normalize(normal));
+                    vec3 R = refract(I, normalize(normal), refraction_ratio);
+                    //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+                    color = vec4((texture(cubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
+                    //color = vec4((diffuse_out + specular_out + ambient_color + dither(textureCoordinates)), 1.0);
+                }
             }
         }
         else{
