@@ -34,6 +34,7 @@ layout(binding = 5) uniform samplerCube dynamicCubeMap;
 
 vec4 diffuse_texture_color = texture(diffuseTexture, textureCoordinates);
 vec3 normal_texture_color = TBN*(texture(normalMap, textureCoordinates).xyz*2-1);
+vec3 test_normal_texture_color = texture(normalMap, textureCoordinates).xyz*2-1; // Temporary solution to TBN mystery
 vec4 roughness_texture = texture(roughnessMap, textureCoordinates);
 vec4 metal_roughness_texture = texture(metalRoughnessMap, textureCoordinates);
 
@@ -61,7 +62,7 @@ void main()
 {
     vec3 normalized_normal;
     if (has_normal_map != 0){ // activates if we use textures and don't do 2d model
-        normalized_normal = normalize(vec3(normal_texture_color)); //Replace normal with normal texture if it exists
+        normalized_normal = normalize(vec3(test_normal_texture_color)); //Replace normal with normal texture if it exists
     }
     else{
         normalized_normal = normalize(normal); 
@@ -124,10 +125,11 @@ void main()
             }
 
             if(do_metal_roughness != 0){ // Right now metal roughness does not affect anything but roughness, which is whay both results of the if are the same
-                vec3 I = normalize(pos - camerapos);
+                vec3 I = normalize(pos - camerapos); //normalize(vec3(0.0, 20.0, -80.0));
                 //vec3 R = reflect(I, normalized_normal);
                 vec3 R = reflect(I, normalize(normal)); //When cat only use regular normal, and not TBN normal
-                R = normalize(inverse(mat3(V)) * R);
+                //R = normalize(inverse(mat3(V)) * R);
+                R = normalize(mat3(V) * R);
                 if (dynamicCube == 1){
                     color = vec4((texture(dynamicCubeMap, R).rgb*diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates)), 1.0); 
                 }
@@ -141,10 +143,10 @@ void main()
                 }
             }else { 
                 if (has_normal_map == 1){ 
-                    color = vec4(diffuse_texture_color.rgb + diffuse_out + specular_out + dither(textureCoordinates), 1.0); 
+                    color = vec4(diffuse_texture_color.rgb - vec3(0.3, 0.3, 0.3) + diffuse_out + specular_out + dither(textureCoordinates), 1.0); 
                 }
                 else{ // All other objects are refractive
-                    float refraction_ratio = 1.00/1.33;
+                    float refraction_ratio = 1.00/1.52;
                     vec3 I = normalize(pos - camerapos);
                     //vec3 R = reflect(I, normalized_normal);
                     //vec3 R = reflect(I, normalize(normal));
