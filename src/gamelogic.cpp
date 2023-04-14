@@ -49,6 +49,7 @@ SceneNode* stoneNode;
 
 double ballRadius = 3.0f;
 bool dynamicCubeReady = false;
+bool show_stone = true;
 //bool cat_rot_pos = true;
 
 GLuint cubemap;
@@ -223,13 +224,13 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     lightSources[1].lightNode->lightID = 1;
     lightSources[2].lightNode->lightID = 2;
 
-    lightSources[0].lightColor = glm::vec3(1.0, 1.0, 1.0);
+    lightSources[0].lightColor = glm::vec3(0.1, 0.1, 0.1);
     lightSources[1].lightColor = glm::vec3(0.0, 1.0, 0.0);
     lightSources[2].lightColor = glm::vec3(0.0, 0.0, 1.0);
 
-    lightSources[0].lightNode->position = glm::vec3(0.0, 300.0, -50.0);
-    lightSources[1].lightNode->position = glm::vec3( 0.0, 300.0, -50.0);
-    lightSources[2].lightNode->position = glm::vec3( 0.0, 300.0, -50.0);
+    lightSources[0].lightNode->position = glm::vec3(0.0, 300.0, 0.0);
+    lightSources[1].lightNode->position = glm::vec3( 0.0, 300.0, -80.0);
+    lightSources[2].lightNode->position = glm::vec3( 0.0, 300.0, -70.0);
 
     rootNode->children.push_back(skyboxNode);
     //rootNode->children.push_back(boxNode);
@@ -362,10 +363,10 @@ void initGame(GLFWwindow* window, CommandLineOptions gameOptions) {
     uploadTexture(&normal_stone_id, normal_stone);
     stoneNode->normalMapTextureID = normal_stone_id;
 
-    /*PNGImage metal_rough_stone =  loadPNGFile("../res/textures/stone3/textures/moss_rock_roughness.png");
-    GLuint metal_rough_stone_id;
-    uploadTexture(&metal_rough_stone_id, metal_rough_stone);
-    catNode->metalRoughnessMapID = metal_rough_stone_id;*/
+    PNGImage rough_stone =  loadPNGFile("../res/textures/stone3/textures/moss_rock_roughness.png");
+    GLuint rough_stone_id;
+    uploadTexture(&rough_stone_id, rough_stone);
+    catNode->roughnessMapID = rough_stone_id;
 
     //Colors for the balls (I'm lazy)
     PNGImage red_ball =  loadPNGFile("../res/textures/Red.png");
@@ -408,6 +409,9 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     camera.handleMouseButtonInputs(button, action);
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
+        show_stone = !show_stone;
+    }
 }
 
 //TODO: Find why reflection seems wrong/cover it up by moving the balls
@@ -425,7 +429,7 @@ void updateFrame(GLFWwindow* window) {
     double deltaAngle2 = fmod(totalElapsedTime/2, 6.28);
     double deltaAngle3 = fmod(totalElapsedTime*2, 6.28);
 
-    ballNode->position = glm::vec3(catNode->position.x +  20 * cos( deltaAngle ), 0, catNode->position.z + 20* sin( deltaAngle ));
+    ballNode->position = glm::vec3(catNode->position.x +  25 * cos( deltaAngle ), 0, catNode->position.z + 25* sin( deltaAngle ));
     ballNode2->position = glm::vec3(catNode->position.x +  50 * cos( deltaAngle2 ), -20.0, catNode->position.z + 50* sin( deltaAngle2 ));
     ballNode3->position = glm::vec3(catNode->position.x +  40 * cos( deltaAngle3 ), -10.0, catNode->position.z + 40* sin( deltaAngle3 ));
 
@@ -756,7 +760,7 @@ void renderNode(SceneNode* node) {
             }
             break;
         case GEOMETRY_NORMAL_MAPPED:
-            if(node->vertexArrayObjectID != -1 && dynamicCubeReady) { // I don't render cat when sampeling for dynamic cubemap
+            if(node->vertexArrayObjectID != -1 && (dynamicCubeReady || (node == stoneNode && show_stone))) { // I don't render cat when sampeling for dynamic cubemap
                 glUniform1i(7, 0); // is_3d
                 glBindTextureUnit(1, node->normalMapTextureID);
                 glBindVertexArray(node->vertexArrayObjectID);
@@ -800,7 +804,7 @@ void renderFrame(GLFWwindow* window) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (int i; i < 6; i++){
-        getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(0.0, -20.0, -80.0)); // cat position glm::vec3(catNode->currentTransformationMatrix * glm::vec4(0,0,0,1)))
+        getDynamicCubeSides(cubemap, i, &projection, &view, glm::vec3(0.0, -10.0, -80.0)); // cat position (tbh. it's static, so we can hard code) glm::vec3(catNode->currentTransformationMatrix * glm::vec4(0,0,0,1)))
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         renderNode(rootNode);
     }
